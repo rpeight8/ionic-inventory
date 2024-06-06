@@ -1,3 +1,43 @@
+# Status
+
+## Android
+
+- [x] Network
+- [ ] Storage
+- [x] Camera
+- [x] QR Code Scanner
+- [ ] NFC
+
+      Wasn't able to check because of:
+
+  - Capasitor v6 ? (same reason as Background Runners)
+  - Outdated NFC plugins
+
+  [Sponsorware NFC](https://capawesome.io/plugins/nfc/) to check
+
+- [ ] Background Runners
+
+  - [ ] Location
+  - [ ] Network
+  - [ ] Request
+
+  [Doesn't work for Capacitor v6 yet](https://github.com/ionic-team/capacitor-background-runner/pull/92)
+
+## iOS
+
+- [ ] Network
+- [ ] Storage
+- [ ] Camera
+- [ ] QR Code Scanner
+- [ ] NFC
+- [ ] Background Runners
+
+  - [ ] Location
+  - [ ] Network
+  - [ ] Request
+
+  [Doesn't work for Capacitor v6 yet](https://github.com/ionic-team/capacitor-background-runner/pull/92)
+
 # How to Run
 
 Follow these steps to set up your environment and run the project.
