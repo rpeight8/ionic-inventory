@@ -1,6 +1,6 @@
 // src/Login.js
 import React from "react";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../providers/AuthContext";
 import { useHistory } from "react-router-dom";
 
 const Login = () => {

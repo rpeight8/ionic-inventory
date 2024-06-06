@@ -32,10 +32,10 @@ import "@ionic/react/css/palettes/dark.system.css";
 
 /* Theme variables */
 import "./theme/variables.css";
-import { AuthProvider } from "./AuthContext";
+import { AuthProvider } from "./providers/AuthContext";
 import Login from "./pages/Login/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import { NetworkProvider } from "./NetworkContext";
+import { NetworkProvider } from "./providers/NetworkContext";
 
 setupIonicReact();
 
