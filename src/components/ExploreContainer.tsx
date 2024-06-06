@@ -1,6 +1,6 @@
 import "./ExploreContainer.css";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { useNetwork } from "../NetworkContext";
+import { useNetwork } from "../providers/NetworkContext";
 
 interface ContainerProps {}
 
