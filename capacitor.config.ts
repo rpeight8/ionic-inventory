@@ -8,6 +8,14 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    BackgroundRunner: {
+      label: "io.ionic.starter.task.sync",
+      src: "task-sync.js",
+      event: "networkStatusChange",
+      repeat: true,
+      interval: 1,
+      autoStart: true,
+    },
   },
 };
 
