@@ -22,3 +22,9 @@
 #container a {
   text-decoration: none;
 }
+
+.barcode-scanner-active {
+  visibility: hidden;
+  --background: transparent;
+  --ion-background-color: transparent;
+}
