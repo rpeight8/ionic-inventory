@@ -5,10 +5,11 @@
 - [x] Network
 - [ ] Storage
 - [x] Camera
-- [x] QR Code Scanner
-- [ ] NFC
+- [x] QR Code Scanner  
+       Can be replaced with [Capacitor Barcode Scanner](https://capacitorjs.com/docs/apis/barcode-scanner)?
 
-      Wasn't able to check because of:
+- [ ] NFC  
+       Wasn't able to test:
 
   - Capasitor v6 ? (same reason as Background Runners)
   - Outdated NFC plugins
