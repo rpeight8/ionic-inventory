@@ -86,3 +86,33 @@ npm i
 ## 1. Install Ionic extension for Visual Studio Code
 
 Install the [Ionic extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ionic.ionic) to run the project from the editor.
+
+# Possible Issues
+
+## Android
+
+1. **Inconsistent JVM-target**
+
+   - **Issue**:
+
+   ```bash
+   Execution failed for task ':capacitor-barcode-scanner:compileDebugKotlin'.
+   > Inconsistent JVM-target compatibility detected for tasks 'compileDebugJavaWithJavac' (17) and 'compileDebugKotlin' (21).
+   ```
+
+   - **Solution**: Add the following code to the `build.gradle` file in the root directory of the project.
+
+   ```gradle
+   subprojects {
+       afterEvaluate { project ->
+           if (project.hasProperty('android')) {
+               android {
+                   compileOptions {
+                       sourceCompatibility JavaVersion.VERSION_21
+                       targetCompatibility JavaVersion.VERSION_21
+                   }
+               }
+           }
+       }
+   }
+   ```
