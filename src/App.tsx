@@ -36,6 +36,7 @@ import { AuthProvider } from "./providers/AuthContext";
 import Login from "./pages/Login/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { NetworkProvider } from "./providers/NetworkContext";
+import { StorageProvider } from "./providers/StorageContext";
 
 setupIonicReact();
 
@@ -43,16 +44,18 @@ const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
       <IonRouterOutlet>
-        <NetworkProvider>
-          <AuthProvider>
-            <Route exact path="/login">
-              <Login />
-            </Route>
-            <ProtectedRoute exact path="/">
-              <Home />
-            </ProtectedRoute>
-          </AuthProvider>
-        </NetworkProvider>
+        <StorageProvider>
+          <NetworkProvider>
+            <AuthProvider>
+              <Route exact path="/login">
+                <Login />
+              </Route>
+              <ProtectedRoute exact path="/">
+                <Home />
+              </ProtectedRoute>
+            </AuthProvider>
+          </NetworkProvider>
+        </StorageProvider>
       </IonRouterOutlet>
     </IonReactRouter>
   </IonApp>

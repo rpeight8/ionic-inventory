@@ -116,3 +116,13 @@ Install the [Ionic extension for Visual Studio Code](https://marketplace.visuals
        }
    }
    ```
+
+1. **SQLite Plugin driver is not loaded**
+
+   - **Issue**:
+
+   ```js
+   storage.driver; // asyncStorage, not cordovaSQLiteDriver
+   ```
+
+   - **Solution**: It works only on the device, not on the browser.
