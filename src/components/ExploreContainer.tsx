@@ -1,11 +1,10 @@
 import "./ExploreContainer.css";
-import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { useNetwork } from "../providers/NetworkContext";
+import { useNetwork } from "../hooks/useNetwork";
 import BarcodeScannerService from "../services/BarcodeScanner";
 import { startNFCScanner } from "../services/NFCScanner";
 import { useStorage } from "../providers/StorageContext";
 
-const startScan = async () => {
+const startBarcodeScan = async () => {
   try {
     const result = await BarcodeScannerService.startBarcodeScanner();
     console.log(result);
@@ -29,11 +28,13 @@ const ExploreContainer: React.FC<{}> = () => {
 
   return (
     <div id="container">
+      <h1>v1</h1>
+      <br />
       <strong>Network status: {isOnline ? "Online" : "Offline"}</strong>
       <br />
       <strong>Ready to scan</strong>
       <br />
-      <button onClick={startScan}>Start scan</button>
+      <button onClick={startBarcodeScan}>Start scan</button>
       <br />
       <button onClick={startNFCScan}>Start NFC scan</button>
       <br />

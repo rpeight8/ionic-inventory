@@ -35,7 +35,8 @@ import "./theme/variables.css";
 import { AuthProvider } from "./providers/AuthContext";
 import Login from "./pages/Login/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import { NetworkProvider } from "./providers/NetworkContext";
+import store from "./store";
+import { Provider } from "react-redux";
 import { StorageProvider } from "./providers/StorageContext";
 
 setupIonicReact();
@@ -44,8 +45,8 @@ const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
       <IonRouterOutlet>
-        <StorageProvider>
-          <NetworkProvider>
+        <Provider store={store}>
+          <StorageProvider>
             <AuthProvider>
               <Route exact path="/login">
                 <Login />
@@ -54,8 +55,8 @@ const App: React.FC = () => (
                 <Home />
               </ProtectedRoute>
             </AuthProvider>
-          </NetworkProvider>
-        </StorageProvider>
+          </StorageProvider>
+        </Provider>
       </IonRouterOutlet>
     </IonReactRouter>
   </IonApp>
