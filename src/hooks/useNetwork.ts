@@ -18,6 +18,10 @@ export const useNetwork = () => {
     await dispatch(updateNetworkStatus());
   }, [dispatch]);
 
+  const fetchStatus = useCallback(async () => {
+    await dispatch(fetchNetworkStatus());
+  }, [dispatch]);
+
   useEffect(() => {
     NetworkStatusService.addListener(
       "networkStatusChange",
@@ -31,5 +35,9 @@ export const useNetwork = () => {
     };
   }, [handleNetworkStatusChange]);
 
-  return { isOnline, updateNetworkStatus: handleNetworkStatusChange };
+  return {
+    isOnline,
+    updateNetworkStatus: handleNetworkStatusChange,
+    fetchNetworkStatus: fetchStatus,
+  };
 };
