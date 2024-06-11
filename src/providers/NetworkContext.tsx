@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Network } from "@capacitor/network";
+import { Network } from "../services/Network";
 
 const NetworkContext = createContext<{
   isOnline: boolean;
