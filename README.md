@@ -5,9 +5,7 @@
 - [x] Network
 - [ ] Storage
 - [x] Camera
-- [x] QR Code Scanner  
-       Can be replaced with [Capacitor Barcode Scanner](https://capacitorjs.com/docs/apis/barcode-scanner)?
-
+- [x] QR Code Scanner
 - [ ] NFC  
        Wasn't able to test:
 
