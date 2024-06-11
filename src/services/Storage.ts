@@ -1,14 +1,14 @@
 import CordovaSQLiteDriver from "localforage-cordovasqlitedriver";
 import { Drivers, Storage as IonicStorage } from "@ionic/storage";
 
-type Storage = {
+type StorageService = {
   initialize: () => Promise<void>;
   getDriver: () => string | undefined;
 };
 
 let storage: IonicStorage | undefined;
 
-const Storage: Storage = {
+const StorageService: StorageService = {
   async initialize() {
     if (!storage) {
       storage = new IonicStorage({
@@ -28,4 +28,5 @@ const Storage: Storage = {
   },
 };
 
-export { Storage };
+export default StorageService;
+export type { StorageService };

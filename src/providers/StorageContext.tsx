@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Storage } from "../services/Storage";
+import StorageService from "../services/Storage";
 
 type StorageReadyState = boolean;
 type StorageDriver = string | undefined;
@@ -22,8 +22,8 @@ export const StorageProvider = ({
 
   useEffect(() => {
     const initializeStorage = async () => {
-      await Storage.initialize();
-      setStorageDriver(Storage.getDriver());
+      await StorageService.initialize();
+      setStorageDriver(StorageService.getDriver());
       setStorageReady(true);
     };
     try {

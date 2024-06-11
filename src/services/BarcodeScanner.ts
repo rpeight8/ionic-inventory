@@ -7,12 +7,17 @@ type ScanResult = {
   ScanResult: string;
 };
 type StartBarcodeScanner = () => Promise<ScanResult>;
-
-const startBarcodeScanner: StartBarcodeScanner = async () => {
-  return CapacitorBarcodeScanner.scanBarcode({
-    hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
-  });
+type BarcodeScannerService = {
+  startBarcodeScanner: StartBarcodeScanner;
 };
 
-export { startBarcodeScanner };
-export type { ScanResult, StartBarcodeScanner };
+const BarcodeScannerService: BarcodeScannerService = {
+  startBarcodeScanner: async () => {
+    return CapacitorBarcodeScanner.scanBarcode({
+      hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+    });
+  },
+};
+
+export default BarcodeScannerService;
+export type { BarcodeScannerService };

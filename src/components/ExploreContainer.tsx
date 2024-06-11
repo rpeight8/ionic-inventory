@@ -1,13 +1,13 @@
 import "./ExploreContainer.css";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { useNetwork } from "../providers/NetworkContext";
-import { startBarcodeScanner } from "../services/BarcodeScanner";
+import BarcodeScannerService from "../services/BarcodeScanner";
 import { startNFCScanner } from "../services/NFCScanner";
 import { useStorage } from "../providers/StorageContext";
 
 const startScan = async () => {
   try {
-    const result = await startBarcodeScanner();
+    const result = await BarcodeScannerService.startBarcodeScanner();
     console.log(result);
   } catch (error) {
     console.error("An error occurred while scanning QR-Code:", error);

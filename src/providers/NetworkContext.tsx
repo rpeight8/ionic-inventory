@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Network } from "../services/Network";
+import NetworkService from "../services/Network";
 
 const NetworkContext = createContext<{
   isOnline: boolean;
@@ -25,7 +25,7 @@ const ping = async () => {
 };
 
 const getNetworkStatus = async () => {
-  const status = await Network.getStatus();
+  const status = await NetworkService.getStatus();
   if (status.connected) {
     const isReachable = await ping();
     return isReachable;
@@ -47,12 +47,12 @@ export const NetworkProvider = ({
   }, []);
 
   useEffect(() => {
-    Network.addListener("networkStatusChange", async () => {
+    NetworkService.addListener("networkStatusChange", async () => {
       updateNetworkStatus();
     });
 
     return () => {
-      Network.removeAllListeners();
+      NetworkService.removeAllListeners();
     };
   }, []);
 
