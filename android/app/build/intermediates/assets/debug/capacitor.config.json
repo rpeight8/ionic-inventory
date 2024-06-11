@@ -1,0 +1,10 @@
+{
+	"appId": "io.ionic.starter",
+	"appName": "ionic-inventory",
+	"webDir": "dist",
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	}
+}

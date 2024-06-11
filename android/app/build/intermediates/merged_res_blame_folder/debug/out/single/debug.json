@@ -1,0 +1,138 @@
+[
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxxhdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-port-xxhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-port-xxhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-mdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-hdpi_ic_launcher_foreground.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-hdpi\\ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxxhdpi\\ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-port-hdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-port-hdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-hdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-hdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-hdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-port-xhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-port-xhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xhdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\xml_file_paths.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\xml\\file_paths.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-mdpi_ic_launcher_foreground.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-mdpi\\ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-v24_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-v24\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable\\ic_launcher_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xhdpi\\ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-port-mdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-port-mdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\xml_config.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\xml\\config.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-land-hdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-land-hdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxhdpi\\ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-land-mdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-land-mdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-land-xhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-land-xhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-land-xxxhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-land-xxxhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-port-xxxhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-port-xxxhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxxhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-mdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-mdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "io.ionic.starter.app-merged_res-59:/xml_config.xml.flat",
+        "source": "io.ionic.starter.app-main-61:/xml/config.xml"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\drawable-land-xxhdpi_splash.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\drawable-land-xxhdpi\\splash.png"
+    },
+    {
+        "merged": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-merged_res-59:\\mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\100z14018\\.gradle\\daemon\\8.2.1\\io.ionic.starter.app-main-61:\\mipmap-xxhdpi\\ic_launcher.png"
+    }
+]
