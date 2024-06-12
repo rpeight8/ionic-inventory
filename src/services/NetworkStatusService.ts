@@ -1,5 +1,5 @@
 import { Network as CapacitorNetwork } from "@capacitor/network";
-import HttpClient from "./HttpClient";
+import HttpClient from "./HttpClientService";
 
 type EventName = "networkStatusChange";
 
@@ -16,13 +16,17 @@ const NetworkStatusService: NetworkStatusService = {
     try {
       const status = await CapacitorNetwork.getStatus();
       if (status.connected) {
-        const resp = await HttpClient.get<string>("https://www.google.com");
-        return { connected: true };
+        await HttpClient.post<string>(
+          "http://localhost:3000/utils/ping",
+          undefined,
+          {}
+        );
       }
 
-      return { connected: false };
+      return status;
     } catch (error) {
-      return { connected: false };
+      console.error(error);
+      throw new Error("Failed to fetch network status");
     }
   },
 };

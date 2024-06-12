@@ -10,7 +10,7 @@ const initialState: NetworkState = {
   isOnline: false,
 };
 
-export const fetchNetworkStatus = createAsyncThunk<boolean, void>(
+const fetchNetworkStatus = createAsyncThunk<boolean, void>(
   "networkStatus/fetchStatus",
   async () => {
     const status = await NetworkStatusService.getStatus();
@@ -18,7 +18,7 @@ export const fetchNetworkStatus = createAsyncThunk<boolean, void>(
   }
 );
 
-export const updateNetworkStatus = createAsyncThunk<void, void>(
+const updateNetworkStatus = createAsyncThunk<void, void>(
   "networkStatus/updateStatus",
   async (_, { dispatch }) => {
     const isOnline = await dispatch(fetchNetworkStatus()).unwrap();
@@ -41,8 +41,12 @@ const networkStatusSlice = createSlice({
         state.isOnline = action.payload;
       }
     );
+    builder.addCase(fetchNetworkStatus.rejected, (state) => {
+      state.isOnline = false;
+    });
   },
 });
 
 export const { setNetworkStatus } = networkStatusSlice.actions;
+export { fetchNetworkStatus, updateNetworkStatus };
 export default networkStatusSlice.reducer;

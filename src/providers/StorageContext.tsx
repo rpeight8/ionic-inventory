@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import StorageService from "../services/Storage";
+import StorageService from "../services/StorageService";
 
 type StorageReadyState = boolean;
 type StorageDriver = string | undefined;
