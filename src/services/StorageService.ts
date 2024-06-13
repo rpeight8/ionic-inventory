@@ -2,12 +2,22 @@ import CordovaSQLiteDriver from "localforage-cordovasqlitedriver";
 import { Drivers, Storage as IonicStorage } from "@ionic/storage";
 import type { Tool } from "../types";
 
+type IdMapping = Record<string, string>;
+type LocalToServerMapping = IdMapping;
+type ServerToLocalMapping = IdMapping;
+type IdMappingResult = {
+  localToServer: LocalToServerMapping;
+  serverToLocal: ServerToLocalMapping;
+};
+
 type StorageService = {
   initialize: () => Promise<void>;
   getDriver: () => string | undefined;
   getTools: () => Promise<Tool[]>;
   setTools: (tools: Tool[]) => Promise<void>;
   createTool: (tool: Tool) => Promise<void>;
+  setIdMapping: (idMapping: LocalToServerMapping) => Promise<void>;
+  getIdMapping: () => Promise<IdMappingResult>;
 };
 
 let storage: IonicStorage | undefined;
@@ -86,9 +96,38 @@ const createToolInternal = async (tool: Tool): Promise<void> => {
   await storage.set("tools", tools);
 };
 
+const getIdMappingInternal = async (): Promise<IdMappingResult> => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+  const localToServerMapping = Object.assign(
+    {},
+    ((await storage.get("idMapping")) ?? {}) as LocalToServerMapping
+  );
+  const serverToLocalMapping = Object.entries(localToServerMapping).reduce(
+    (acc, [key, value]) => {
+      acc[value] = key;
+      return acc;
+    },
+    {} as ServerToLocalMapping
+  );
+
+  return {
+    localToServer: localToServerMapping,
+    serverToLocal: serverToLocalMapping,
+  };
+};
+
+const setIdMappingInternal = async (idMapping: LocalToServerMapping) => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+  return await storage.set("idMapping", idMapping);
+};
+
 const StorageService: StorageService = {
   async initialize() {
-    return queueTask(() => initializeInternal());
+    return initializeInternal();
   },
 
   getDriver() {
@@ -105,6 +144,14 @@ const StorageService: StorageService = {
 
   async createTool(tool: Tool) {
     return queueTask(() => createToolInternal(tool));
+  },
+
+  async setIdMapping(idMapping: Record<string, string>) {
+    return setIdMappingInternal(idMapping);
+  },
+
+  async getIdMapping() {
+    return getIdMappingInternal();
   },
 };
 

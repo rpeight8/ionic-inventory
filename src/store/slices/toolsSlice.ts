@@ -6,7 +6,7 @@ import {
   AsyncThunk,
   SerializedError,
 } from "@reduxjs/toolkit";
-import { fetchTools as fetchToolsService } from "../../services/DataManagerService";
+import DataManagerService from "../../services/DataManagerService";
 import { Tool } from "../../types";
 
 type ToolsState = {
@@ -24,7 +24,7 @@ const initialState: ToolsState = {
 const fetchTools = createAsyncThunk<Tool[], void>(
   "tools/fetchTools",
   async () => {
-    const tools = await fetchToolsService();
+    const tools = await DataManagerService.fetchTools();
     return tools;
   }
 );
