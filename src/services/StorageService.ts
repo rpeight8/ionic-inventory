@@ -11,20 +11,84 @@ type StorageService = {
 };
 
 let storage: IonicStorage | undefined;
+let taskQueue: (() => Promise<void>)[] = [];
+let isProcessingQueue = false;
+
+const processQueue = async () => {
+  if (isProcessingQueue) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (taskQueue.length > 0) {
+    const task = taskQueue.shift();
+    if (task) {
+      await task();
+    }
+  }
+
+  isProcessingQueue = false;
+};
+
+const queueTask = <T>(task: () => Promise<T>): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
+    taskQueue.push(async () => {
+      try {
+        const result = await task();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    processQueue();
+  });
+};
+
+const initializeInternal = async () => {
+  if (!storage) {
+    storage = new IonicStorage({
+      driverOrder: [
+        CordovaSQLiteDriver._driver,
+        Drivers.IndexedDB,
+        Drivers.LocalStorage,
+      ],
+    });
+    await storage.defineDriver(CordovaSQLiteDriver);
+    await storage.create();
+  }
+};
+
+const getToolsInternal = async (): Promise<Tool[]> => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+
+  const tools = await storage.get("tools");
+  return tools ?? [];
+};
+
+const setToolsInternal = async (tools: Tool[]): Promise<void> => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+
+  await storage.set("tools", tools);
+};
+
+const createToolInternal = async (tool: Tool): Promise<void> => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+  const tools = await getToolsInternal();
+  tools.push(tool);
+  await storage.set("tools", tools);
+};
 
 const StorageService: StorageService = {
   async initialize() {
-    if (!storage) {
-      storage = new IonicStorage({
-        driverOrder: [
-          CordovaSQLiteDriver._driver,
-          Drivers.IndexedDB,
-          Drivers.LocalStorage,
-        ],
-      });
-      await storage.defineDriver(CordovaSQLiteDriver);
-      await storage.create();
-    }
+    return queueTask(() => initializeInternal());
   },
 
   getDriver() {
@@ -32,30 +96,15 @@ const StorageService: StorageService = {
   },
 
   async getTools() {
-    if (!storage) {
-      throw new Error("Storage not initialized");
-    }
-
-    const tools = await storage.get("tools");
-    return tools ?? [];
+    return queueTask(() => getToolsInternal());
   },
 
-  async setTools(tools) {
-    if (!storage) {
-      throw new Error("Storage not initialized");
-    }
-
-    await storage.set("tools", tools);
+  async setTools(tools: Tool[]) {
+    return queueTask(() => setToolsInternal(tools));
   },
 
-  async createTool(tool) {
-    if (!storage) {
-      throw new Error("Storage not initialized");
-    }
-
-    const tools = await StorageService.getTools();
-    tools.push(tool);
-    await storage.set("tools", tools);
+  async createTool(tool: Tool) {
+    return queueTask(() => createToolInternal(tool));
   },
 };
 
