@@ -1,4 +1,4 @@
-import { Redirect, Route } from "react-router-dom";
+import { Redirect, Route, Switch } from "react-router-dom";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import Home from "./pages/Home/Home";
@@ -33,7 +33,7 @@ import "@ionic/react/css/palettes/dark.system.css";
 /* Theme variables */
 import "./theme/variables.css";
 import { AuthProvider } from "./providers/AuthContext";
-import Login from "./pages/Login/Login";
+import LoginPage from "./pages/Login/LoginPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import store from "./store";
 import { Provider } from "react-redux";
@@ -48,12 +48,15 @@ const App: React.FC = () => (
         <Provider store={store}>
           <StorageProvider>
             <AuthProvider>
-              <Route exact path="/login">
-                <Login />
-              </Route>
-              <ProtectedRoute exact path="/">
-                <Home />
-              </ProtectedRoute>
+              <IonRouterOutlet>
+                <Route path="/login">
+                  <LoginPage />
+                </Route>
+                <ProtectedRoute path="/app">
+                  <Home />
+                </ProtectedRoute>
+                <Redirect to="/app/tools" />
+              </IonRouterOutlet>
             </AuthProvider>
           </StorageProvider>
         </Provider>
