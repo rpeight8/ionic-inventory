@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "io.ionic.starter.app-mergeDebugResources-57:/values-v27/values-v27.xml",
+            "outputFile": "io.ionic.starter.app-mergeDebugResources-64:/values-v27/values-v27.xml",
             "map": [
                 {
                     "source": "C:\\Users\\100z14018\\.gradle\\caches\\transforms-3\\02af67d3594ada2148314bae886ebee9\\transformed\\core-splashscreen-1.0.1\\res\\values-v27\\values-v27.xml",

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import { fetchTools, selectAllTools } from "../../store/slices/toolsSlice";
 import { useCallback, useEffect } from "react";
+import AddNewToolFab from "../../components/AddNewFAB/AddNewToolFab";
 
 const Tools: React.FC = () => {
   const tools = useSelector(selectAllTools);
@@ -23,6 +24,7 @@ const Tools: React.FC = () => {
             </IonItem>
           ))}
         </IonList>
+        <AddNewToolFab />
       </IonContent>
     </IonPage>
   );

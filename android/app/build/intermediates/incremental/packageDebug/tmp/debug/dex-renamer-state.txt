@@ -1,10 +1,12 @@
-#Thu Jun 13 13:41:51 MSK 2024
+#Mon Jun 17 15:04:51 MSK 2024
 base.0=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\10\\classes.dex
 base.10=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\8\\classes.dex
 base.11=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.12=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\1\\classes.dex
 base.13=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes2.dex
+base.14=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\15\\classes.dex
+base.15=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes3.dex
 base.2=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\13\\classes.dex
 base.3=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\14\\classes.dex
 base.4=D\:\\projects\\ionic-inventory\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\7\\classes.dex
@@ -19,6 +21,8 @@ path.10=8/classes.dex
 path.11=0/classes.dex
 path.12=1/classes.dex
 path.13=classes2.dex
+path.14=15/classes.dex
+path.15=classes3.dex
 path.2=13/classes.dex
 path.3=14/classes.dex
 path.4=7/classes.dex
@@ -33,6 +37,8 @@ renamed.10=classes11.dex
 renamed.11=classes12.dex
 renamed.12=classes13.dex
 renamed.13=classes14.dex
+renamed.14=classes15.dex
+renamed.15=classes16.dex
 renamed.2=classes3.dex
 renamed.3=classes4.dex
 renamed.4=classes5.dex

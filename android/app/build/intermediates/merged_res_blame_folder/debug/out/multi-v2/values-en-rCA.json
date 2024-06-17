@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "io.ionic.starter.app-mergeDebugResources-57:/values-en-rCA/values-en-rCA.xml",
+            "outputFile": "io.ionic.starter.app-mergeDebugResources-64:/values-en-rCA/values-en-rCA.xml",
             "map": [
                 {
                     "source": "C:\\Users\\100z14018\\.gradle\\caches\\transforms-3\\cfccd27a70b89db68e7c0802412cf832\\transformed\\ui-1.4.1\\res\\values-en-rCA\\values-en-rCA.xml",

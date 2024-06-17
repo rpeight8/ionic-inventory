@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "io.ionic.starter.app-mergeDebugResources-57:/values-en-rAU/values-en-rAU.xml",
+            "outputFile": "io.ionic.starter.app-mergeDebugResources-64:/values-en-rAU/values-en-rAU.xml",
             "map": [
                 {
                     "source": "C:\\Users\\100z14018\\.gradle\\caches\\transforms-3\\6b3261ba76aa33ca42c4f0551b10c3a8\\transformed\\material3-1.1.2\\res\\values-en-rAU\\values-en-rAU.xml",
