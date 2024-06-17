@@ -124,3 +124,9 @@ Install the [Ionic extension for Visual Studio Code](https://marketplace.visuals
    ```
 
    - **Solution**: It works only on the device, not on the browser.
+
+1. **The application reloads when a photo is taken for the first time using the camera.**
+
+   - **Issue**: The application reloads when a photo is taken for the first time using the camera.
+
+   - **Solution**:
