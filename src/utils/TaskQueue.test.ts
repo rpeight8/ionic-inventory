@@ -42,7 +42,7 @@ describe("TaskQueue", () => {
 
   it("should process dependencies after the main task", async () => {
     const results: number[] = [];
-    const dependecyOfDependency: Task = {
+    const dependencyOfDependency: Task = {
       action: async () => {
         results.push(3);
       },
@@ -52,7 +52,7 @@ describe("TaskQueue", () => {
       action: async () => {
         results.push(2);
       },
-      dependencies: [dependecyOfDependency],
+      dependencies: [dependencyOfDependency],
     };
     const dependency1: Task = {
       action: async () => {
@@ -69,7 +69,6 @@ describe("TaskQueue", () => {
 
     await taskQueue.queueTask(task);
     await taskQueue.processQueue();
-    console.log(results);
     expect(results).toEqual([1, 1.5, 2, 3]);
   });
 
@@ -94,6 +93,42 @@ describe("TaskQueue", () => {
 
     expect(action).toHaveBeenCalled();
     expect(dependencyAction).not.toHaveBeenCalled();
+  });
+
+  it("should retry a task if it fails and has retry set to true with default retries", async () => {
+    const action = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Test error"))
+      .mockResolvedValueOnce(undefined);
+    const task: Task = { action, retry: true, dependencies: [] };
+
+    await taskQueue.queueTask(task);
+    await taskQueue.processQueue();
+
+    expect(action).toHaveBeenCalledTimes(2); // Should be called twice due to retry
+  });
+
+  it("should retry a task if it fails and has a specific number of retries set", async () => {
+    const action = vi
+      .fn()
+      .mockRejectedValue(new Error("Test error"))
+      .mockResolvedValueOnce(undefined);
+    const task: Task = { action, retry: true, maxRetries: 2, dependencies: [] };
+
+    await taskQueue.queueTask(task);
+    await taskQueue.processQueue();
+
+    expect(action).toHaveBeenCalledTimes(3); // Should be called three times (1 original + 2 retries)
+  });
+
+  it("should not retry a task if it fails and has retry set to false", async () => {
+    const action = vi.fn().mockRejectedValue(new Error("Test error"));
+    const task: Task = { action, retry: false, dependencies: [] };
+
+    await expect(taskQueue.queueTask(task)).rejects.toThrow("Test error");
+    await taskQueue.processQueue();
+
+    expect(action).toHaveBeenCalledTimes(1); // Should be called once and not retried
   });
 
   it("should process tasks concurrently", async () => {

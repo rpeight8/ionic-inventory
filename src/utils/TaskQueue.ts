@@ -1,11 +1,16 @@
+// retry doesnt work
+
 import Queue from "./Queue";
 
 type Task = {
   action: () => Promise<void>;
+  retry?: boolean;
+  maxRetries?: number;
   dependencies: Task[];
 };
 
 const processTask = async (task: Task): Promise<void> => {
+  console.log("Processing task");
   try {
     await task.action();
     for (const dependency of task.dependencies) {
@@ -17,7 +22,11 @@ const processTask = async (task: Task): Promise<void> => {
 };
 
 class TaskQueue {
-  private taskQueue = new Queue<() => Promise<void>>();
+  private taskQueue = new Queue<{
+    task: () => Promise<void>;
+    retry: boolean | undefined;
+    retriesLeft: number;
+  }>();
   private isProcessingQueue = false;
 
   public async processQueue(): Promise<void> {
@@ -28,9 +37,17 @@ class TaskQueue {
     this.isProcessingQueue = true;
 
     while (!this.taskQueue.isEmpty()) {
-      const task = this.taskQueue.dequeue();
-      if (task) {
+      const taskWrapper = this.taskQueue.dequeue();
+      if (!taskWrapper) {
+        continue;
+      }
+      const { task, retry, retriesLeft } = taskWrapper;
+      try {
         await task();
+      } catch (error) {
+        if (retry && retriesLeft > 0) {
+          this.taskQueue.enqueue({ task, retry, retriesLeft: retriesLeft - 1 });
+        }
       }
     }
 
@@ -39,18 +56,23 @@ class TaskQueue {
 
   public queueTask(task: Task): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.taskQueue.enqueue(async () => {
+      const taskWrapper = async () => {
         try {
           await processTask(task);
           resolve();
         } catch (error) {
           reject(error);
         }
-      });
+      };
 
-      if (!this.isProcessingQueue) {
-        this.processQueue();
-      }
+      const retries =
+        task.maxRetries !== undefined ? task.maxRetries : task.retry ? 1 : 0;
+      this.taskQueue.enqueue({
+        task: taskWrapper,
+        retry: task.retry,
+        retriesLeft: retries,
+      });
+      this.processQueue();
     });
   }
 }
