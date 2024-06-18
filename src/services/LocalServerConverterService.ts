@@ -3,6 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 type LocalServerConverterService = {
   toLocal<S extends { id: string }>(entities: S[]): Promise<S[]>;
   toServer<L extends { id: string }>(entities: L[]): Promise<L[]>;
+  addLocalServerMappingEntry: (
+    localId: string,
+    serverId: string
+  ) => Promise<void>;
 };
 
 type IdMapping = Record<string, string>;
@@ -100,9 +104,28 @@ const createLocalServerConverterService = (
     return convertedEntities;
   };
 
+  const addLocalServerMappingEntry = async (
+    localId: string,
+    serverId: string
+  ) => {
+    if (!localToServerMapping || !serverToLocalMapping) {
+      await loadMappings();
+    }
+
+    if (!localToServerMapping || !serverToLocalMapping) {
+      throw new Error("Id mappings are not loaded");
+    }
+
+    localToServerMapping[localId] = serverId;
+    serverToLocalMapping[serverId] = localId;
+
+    await storageService.setIdMapping(localToServerMapping);
+  };
+
   return {
     toLocal,
     toServer,
+    addLocalServerMappingEntry,
   };
 };
 

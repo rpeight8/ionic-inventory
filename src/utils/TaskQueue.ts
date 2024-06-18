@@ -1,16 +1,11 @@
-// retry doesnt work
-
 import Queue from "./Queue";
 
 type Task = {
   action: () => Promise<void>;
-  retry?: boolean;
-  maxRetries?: number;
   dependencies: Task[];
 };
 
 const processTask = async (task: Task): Promise<void> => {
-  console.log("Processing task");
   try {
     await task.action();
     for (const dependency of task.dependencies) {
@@ -22,11 +17,7 @@ const processTask = async (task: Task): Promise<void> => {
 };
 
 class TaskQueue {
-  private taskQueue = new Queue<{
-    task: () => Promise<void>;
-    retry: boolean | undefined;
-    retriesLeft: number;
-  }>();
+  private taskQueue = new Queue<() => Promise<void>>();
   private isProcessingQueue = false;
 
   public async processQueue(): Promise<void> {
@@ -37,24 +28,22 @@ class TaskQueue {
     this.isProcessingQueue = true;
 
     while (!this.taskQueue.isEmpty()) {
-      const taskWrapper = this.taskQueue.dequeue();
-      if (!taskWrapper) {
+      const task = this.taskQueue.dequeue();
+      if (!task) {
         continue;
       }
-      const { task, retry, retriesLeft } = taskWrapper;
       try {
         await task();
       } catch (error) {
-        if (retry && retriesLeft > 0) {
-          this.taskQueue.enqueue({ task, retry, retriesLeft: retriesLeft - 1 });
-        }
+        console.error("Task failed:", error);
+        throw error;
       }
     }
 
     this.isProcessingQueue = false;
   }
 
-  public queueTask(task: Task): Promise<void> {
+  public queueTask(task: Task): Promise<unknown> {
     return new Promise<void>((resolve, reject) => {
       const taskWrapper = async () => {
         try {
@@ -65,15 +54,24 @@ class TaskQueue {
         }
       };
 
-      const retries =
-        task.maxRetries !== undefined ? task.maxRetries : task.retry ? 1 : 0;
-      this.taskQueue.enqueue({
-        task: taskWrapper,
-        retry: task.retry,
-        retriesLeft: retries,
-      });
-      this.processQueue();
+      this.taskQueue.enqueue(taskWrapper);
     });
+  }
+
+  public async processNextTask(): Promise<void> {
+    const task = this.taskQueue.dequeue();
+    if (task) {
+      try {
+        await task();
+      } catch (error) {
+        console.error("Task failed:", error);
+        throw error;
+      }
+    }
+  }
+
+  public hasTasks(): boolean {
+    return !this.taskQueue.isEmpty();
   }
 }
 

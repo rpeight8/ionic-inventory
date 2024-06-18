@@ -16,11 +16,7 @@ const NetworkStatusService: NetworkStatusService = {
     try {
       const status = await CapacitorNetwork.getStatus();
       if (status.connected) {
-        await HttpClient.post<string>(
-          "http://localhost:3000/utils/ping",
-          undefined,
-          {}
-        );
+        await HttpClient.ping<string>("", {});
       }
 
       return status;

@@ -1,7 +1,7 @@
 import "./ExploreContainer.css";
 import { useNetwork } from "../hooks/useNetwork";
-import BarcodeScannerService from "../services/BarcodeScanner";
-import { startNFCScanner } from "../services/NFCScanner";
+import BarcodeScannerService from "../services/BarcodeScannerService";
+import { startNFCScanner } from "../services/NFCScannerService";
 import { useStorage } from "../providers/StorageContext";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../store";

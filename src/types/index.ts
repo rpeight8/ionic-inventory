@@ -3,9 +3,12 @@ import * as icons from "ionicons/icons";
 type Tool = {
   id: string;
   title: string;
-  toolbox_id: string;
+  toolbox_id?: string;
   quantity: number;
+  photo?: string;
 };
+
+type NewTool = Omit<Tool, "id">;
 
 type Toolbox = {
   id: string;
@@ -15,4 +18,4 @@ type Toolbox = {
 
 type IonicIcon = (typeof icons)[keyof typeof icons];
 
-export type { Tool, Toolbox, IonicIcon };
+export type { Tool, NewTool, Toolbox, IonicIcon };

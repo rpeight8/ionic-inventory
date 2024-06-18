@@ -10,7 +10,7 @@ const Login = () => {
 
   const handleLogin = () => {
     login();
-    history.push("/app/tools/new");
+    history.push("/app/home");
   };
 
   return (

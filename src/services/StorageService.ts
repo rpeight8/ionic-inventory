@@ -15,6 +15,7 @@ type StorageService = {
   getDriver: () => string | undefined;
   getTools: () => Promise<Tool[]>;
   setTools: (tools: Tool[]) => Promise<void>;
+  addTool: (tool: Tool) => Promise<void>;
   createTool: (tool: Tool) => Promise<void>;
   setIdMapping: (idMapping: LocalToServerMapping) => Promise<void>;
   getIdMapping: () => Promise<IdMappingResult>;
@@ -96,6 +97,15 @@ const createToolInternal = async (tool: Tool): Promise<void> => {
   await storage.set("tools", tools);
 };
 
+const addToolInternal = async (tool: Tool): Promise<void> => {
+  if (!storage) {
+    throw new Error("Storage not initialized");
+  }
+  const tools = await getToolsInternal();
+  tools.push(tool);
+  await storage.set("tools", tools);
+};
+
 const getIdMappingInternal = async (): Promise<IdMappingResult> => {
   if (!storage) {
     throw new Error("Storage not initialized");
@@ -144,6 +154,10 @@ const StorageService: StorageService = {
 
   async createTool(tool: Tool) {
     return queueTask(() => createToolInternal(tool));
+  },
+
+  async addTool(tool: Tool) {
+    return queueTask(() => addToolInternal(tool));
   },
 
   async setIdMapping(idMapping: Record<string, string>) {

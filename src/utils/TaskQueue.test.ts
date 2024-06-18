@@ -12,10 +12,12 @@ describe("TaskQueue", () => {
     const action = vi.fn().mockResolvedValue(undefined);
     const task: Task = { action, dependencies: [] };
 
-    await taskQueue.queueTask(task);
+    taskQueue.queueTask(task);
+    expect(taskQueue.hasTasks()).toBe(true);
     await taskQueue.processQueue();
 
     expect(action).toHaveBeenCalled();
+    expect(taskQueue.hasTasks()).toBe(false);
   });
 
   it("should process tasks in the order they were enqueued", async () => {
@@ -33,8 +35,8 @@ describe("TaskQueue", () => {
       dependencies: [],
     };
 
-    await taskQueue.queueTask(task1);
-    await taskQueue.queueTask(task2);
+    taskQueue.queueTask(task1);
+    taskQueue.queueTask(task2);
     await taskQueue.processQueue();
 
     expect(results).toEqual([1, 2]);
@@ -67,7 +69,7 @@ describe("TaskQueue", () => {
       dependencies: [dependency1, dependency],
     };
 
-    await taskQueue.queueTask(task);
+    taskQueue.queueTask(task);
     await taskQueue.processQueue();
     expect(results).toEqual([1, 1.5, 2, 3]);
   });
@@ -79,7 +81,9 @@ describe("TaskQueue", () => {
       dependencies: [],
     };
 
-    await expect(taskQueue.queueTask(task)).rejects.toThrow("Test error");
+    const queueRes = taskQueue.queueTask(task);
+    await expect(taskQueue.processQueue()).resolves.not.toThrow();
+    await expect(queueRes).rejects.toThrow(error);
   });
 
   it("should not process dependencies if the main task fails", async () => {
@@ -88,50 +92,19 @@ describe("TaskQueue", () => {
     const dependency: Task = { action: dependencyAction, dependencies: [] };
     const task: Task = { action, dependencies: [dependency] };
 
-    await expect(taskQueue.queueTask(task)).rejects.toThrow("Test error");
-    await taskQueue.processQueue();
-
+    const queueRes = taskQueue.queueTask(task);
+    try {
+      await taskQueue.processQueue();
+    } catch (error) {
+      // Catching and logging the error for better debugging
+      console.error("Error caught during task processing:", error);
+    }
+    await expect(queueRes).rejects.toThrow();
     expect(action).toHaveBeenCalled();
     expect(dependencyAction).not.toHaveBeenCalled();
   });
 
-  it("should retry a task if it fails and has retry set to true with default retries", async () => {
-    const action = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Test error"))
-      .mockResolvedValueOnce(undefined);
-    const task: Task = { action, retry: true, dependencies: [] };
-
-    await taskQueue.queueTask(task);
-    await taskQueue.processQueue();
-
-    expect(action).toHaveBeenCalledTimes(2); // Should be called twice due to retry
-  });
-
-  it("should retry a task if it fails and has a specific number of retries set", async () => {
-    const action = vi
-      .fn()
-      .mockRejectedValue(new Error("Test error"))
-      .mockResolvedValueOnce(undefined);
-    const task: Task = { action, retry: true, maxRetries: 2, dependencies: [] };
-
-    await taskQueue.queueTask(task);
-    await taskQueue.processQueue();
-
-    expect(action).toHaveBeenCalledTimes(3); // Should be called three times (1 original + 2 retries)
-  });
-
-  it("should not retry a task if it fails and has retry set to false", async () => {
-    const action = vi.fn().mockRejectedValue(new Error("Test error"));
-    const task: Task = { action, retry: false, dependencies: [] };
-
-    await expect(taskQueue.queueTask(task)).rejects.toThrow("Test error");
-    await taskQueue.processQueue();
-
-    expect(action).toHaveBeenCalledTimes(1); // Should be called once and not retried
-  });
-
-  it("should process tasks concurrently", async () => {
+  it("should allow processing tasks one by one", async () => {
     const results: number[] = [];
     const task1: Task = {
       action: async () => {
@@ -146,9 +119,39 @@ describe("TaskQueue", () => {
       dependencies: [],
     };
 
-    await Promise.all([taskQueue.queueTask(task1), taskQueue.queueTask(task2)]);
-    await taskQueue.processQueue();
+    taskQueue.queueTask(task1);
+    taskQueue.queueTask(task2);
 
+    await taskQueue.processNextTask();
+    expect(results).toEqual([1]);
+
+    await taskQueue.processNextTask();
     expect(results).toEqual([1, 2]);
+  });
+
+  it("should indicate whether there are tasks in the queue", async () => {
+    const task: Task = { action: async () => {}, dependencies: [] };
+
+    taskQueue.queueTask(task);
+    expect(taskQueue.hasTasks()).toBe(true);
+
+    await taskQueue.processNextTask();
+    expect(taskQueue.hasTasks()).toBe(false);
+  });
+
+  it("should not throw an error if there are no tasks to process", async () => {
+    await expect(taskQueue.processNextTask()).resolves.not.toThrow();
+  });
+
+  it("should not process any tasks if the queue is empty", async () => {
+    const action = vi.fn().mockResolvedValue(undefined);
+    const task: Task = { action, dependencies: [] };
+
+    taskQueue.queueTask(task);
+    await taskQueue.processNextTask();
+    await taskQueue.processNextTask(); // Process next task when queue is already empty
+
+    expect(action).toHaveBeenCalledTimes(1); // Should be called only once
+    expect(taskQueue.hasTasks()).toBe(false);
   });
 });

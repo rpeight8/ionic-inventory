@@ -7,7 +7,7 @@ import {
   SerializedError,
 } from "@reduxjs/toolkit";
 import DataManagerService from "../../services/DataManagerService";
-import { Tool } from "../../types";
+import { NewTool, Tool } from "../../types";
 
 type ToolsState = {
   tools: Tool[];
@@ -29,8 +29,15 @@ const fetchTools = createAsyncThunk<Tool[], void>(
   }
 );
 
+const createTool = createAsyncThunk<Tool, NewTool>(
+  "tools/createTool",
+  async (tool: NewTool) => {
+    const newTool = await DataManagerService.createTool(tool);
+    return newTool;
+  }
+);
+
 const setTools = (state: ToolsState, action: PayloadAction<Tool[]>) => {
-  console.log(state);
   state.tools = action.payload;
 };
 
@@ -57,10 +64,26 @@ const toolsSlice = createSlice({
       state.status = "failed";
       state.error = action.error;
     });
+    builder.addCase(createTool.pending, (state) => {
+      state.status = "loading";
+      state.error = undefined;
+    });
+    builder.addCase(
+      createTool.fulfilled,
+      (state, action: PayloadAction<Tool>) => {
+        state.status = "succeeded";
+        state.error = undefined;
+        state.tools.push(action.payload);
+      }
+    );
+    builder.addCase(createTool.rejected, (state, action) => {
+      state.status = "failed";
+      state.error = action.error;
+    });
   },
 });
 
 const selectAllTools = (state: { tools: ToolsState }) => state.tools.tools;
 
-export { fetchTools, selectAllTools };
+export { fetchTools, createTool, selectAllTools };
 export default toolsSlice.reducer;

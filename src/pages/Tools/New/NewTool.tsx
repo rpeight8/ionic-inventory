@@ -1,9 +1,14 @@
 import { IonContent, IonPage, IonInput, IonButton, IonImg } from "@ionic/react";
 import React, { useCallback, useState } from "react";
 import CameraService from "../../../services/CameraService";
+import { createTool } from "../../../store/slices/toolsSlice";
 import "./NewTool.css";
+import { AppDispatch } from "../../../store";
+import { useDispatch } from "react-redux";
 
 const NewTool: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
   const [title, setTitle] = useState("");
   const [isTitleTouched, setIsTitleTouched] = useState(false);
   const [isTitleValid, setIsTitleValid] = useState<boolean>();
@@ -35,6 +40,8 @@ const NewTool: React.FC = () => {
     if (!isTitleValid || !isQuantityValid) {
       return;
     }
+
+    dispatch(createTool({ title: title, quantity: parseInt(quantity), photo }));
     console.log("submit");
   };
 
