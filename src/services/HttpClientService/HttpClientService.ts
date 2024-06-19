@@ -59,9 +59,7 @@ const HttpClientService: HttpClient = {
 
       return handleResponse(response);
     } catch (error) {
-      if (error instanceof Error) {
-        return [, new UnhandledError(error.message)];
-      }
+      return [, handleError(error)];
     }
   },
 
@@ -73,7 +71,7 @@ const HttpClientService: HttpClient = {
       };
       const fullUrl = buildUrl(url, config.useBaseUrl === false ? "" : baseUrl);
       const response = await CapacitorHttp.request({
-        url: fullUrl + "sdasd",
+        url: fullUrl,
         method: "POST",
         headers: config.headers,
         data: body,
@@ -164,14 +162,12 @@ function buildUrl(
   return fullUrl;
 }
 
-function handleResponse(response: any) {
+function handleResponse(response: any): [any] | [any, Error] {
   if (response.status >= 200 && response.status < 300) {
-    return response.data;
-  } else {
-    throw new Error(
-      `HTTP error! status: ${response.status}, message: ${response.data}`
-    );
+    return [response.data];
   }
+
+  return [, new BasicError(response.data, response.status)];
 }
 
 function handleError(error: unknown): Error {

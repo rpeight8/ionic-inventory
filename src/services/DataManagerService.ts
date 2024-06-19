@@ -47,7 +47,7 @@ const DataManagerService: DataManagerService = {
           throw resp[1];
         }
 
-        tools = await LocalServerConverterService.toLocal(tools);
+        tools = await LocalServerConverterService.toLocal(resp[0]);
         await StorageService.setTools(tools);
       } catch (error) {
         console.error("Failed to fetch tools", error);
@@ -79,6 +79,11 @@ const DataManagerService: DataManagerService = {
           if (err) {
             throw err;
           }
+
+          await LocalServerConverterService.addLocalServerMappingEntry(
+            id,
+            createdTool.id
+          );
         },
         dependencies: [],
       }).catch((error: unknown) => {

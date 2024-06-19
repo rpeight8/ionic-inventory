@@ -18,9 +18,9 @@ NetworkStatusService.addListener("networkStatusChange", async (status) => {
 
 const SyncService: SyncService = {
   sync: async () => {
-    // if (!(await NetworkStatusService.getStatus()).connected) {
-    //   return;
-    // }
+    if (!(await NetworkStatusService.getStatus()).connected) {
+      return;
+    }
     while (queue.hasTasks()) {
       try {
         await queue.processNextTask();
