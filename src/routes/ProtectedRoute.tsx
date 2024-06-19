@@ -1,33 +1,21 @@
 import React from "react";
 import { Route, Redirect } from "react-router-dom";
 import { useAuth } from "../providers/AuthContext";
+import { IonRoute } from "@ionic/react";
 
 const ProtectedRoute = ({
   children,
-  ...rest
 }: {
   children: React.ReactNode;
   [key: string]: any;
 }) => {
   const { isAuthenticated } = useAuth();
 
-  return (
-    <Route
-      {...rest}
-      render={({ location }) =>
-        isAuthenticated ? (
-          children
-        ) : (
-          <Redirect
-            to={{
-              pathname: "/login",
-              state: { from: location },
-            }}
-          />
-        )
-      }
-    />
-  );
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  return children;
 };
 
 export default ProtectedRoute;
