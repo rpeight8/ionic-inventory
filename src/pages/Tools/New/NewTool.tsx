@@ -6,15 +6,34 @@ import "./NewTool.css";
 import { AppDispatch } from "../../../store";
 import { useDispatch } from "react-redux";
 import SubpageHeader from "../../../components/PageHeaders/SubpageHeader/SubpageHeader";
+import BarcodeScannerService from "../../../services/BarcodeScannerService";
+import type { NewTool } from "../../../types";
+import { useHistory } from "react-router";
+
+const parseToolQRCode = (qrCode: string): [NewTool] | [any, Error] => {
+  try {
+    const parts = qrCode.split(";");
+    return [
+      {
+        title: parts[0].toString(),
+        quantity: parseInt(parts[1]),
+      },
+    ];
+  } catch (error) {
+    return [, new Error("Invalid QR-Code")];
+  }
+};
 
 const NewTool: React.FC = () => {
+  const history = useHistory();
+
   const dispatch = useDispatch<AppDispatch>();
 
-  const [title, setTitle] = useState("");
+  const [title, setTitleState] = useState<string>("");
   const [isTitleTouched, setIsTitleTouched] = useState(false);
   const [isTitleValid, setIsTitleValid] = useState<boolean>();
 
-  const [quantity, setQuantity] = useState("");
+  const [quantity, setQuantityState] = useState<number>(0);
   const [isQuantityTouched, setIsQuantityTouched] = useState(false);
   const [isQuantityValid, setIsQuantityValid] = useState<boolean>();
 
@@ -24,26 +43,49 @@ const NewTool: React.FC = () => {
     return title.length > 0;
   }, []);
 
-  const validateQuantity = useCallback((quantity: string) => {
-    return parseInt(quantity) > 0;
+  const validateQuantity = useCallback((quantity: number) => {
+    return quantity > 0;
+  }, []);
+
+  const setTitle = useCallback((title: string) => {
+    setIsTitleValid(validateTitle(title));
+    setTitleState(title);
+  }, []);
+
+  const setQuantity = useCallback((quantity: number) => {
+    setIsQuantityValid(validateQuantity(quantity));
+    setQuantityState(quantity);
   }, []);
 
   const takePhotoHandler = useCallback(async () => {
     const base64 = await CameraService.takePicture();
     setPhoto(base64);
-  }, []);
+  }, [CameraService, setPhoto]);
+
+  const scanToolQRCodeHandler = useCallback(async () => {
+    const result = await BarcodeScannerService.startBarcodeScanner();
+    const tool = parseToolQRCode(result.ScanResult);
+    if (tool[1]) {
+      console.error(tool[1]);
+      return;
+    }
+
+    setTitle(tool[0].title);
+    setQuantity(tool[0].quantity.toString());
+  }, [BarcodeScannerService]);
 
   const removePhotoHandler = useCallback(() => {
     setPhoto(undefined);
-  }, []);
+  }, [setPhoto]);
 
-  const submit = () => {
+  const submitNewTool = () => {
     if (!isTitleValid || !isQuantityValid) {
       return;
     }
 
-    dispatch(createTool({ title: title, quantity: parseInt(quantity), photo }));
-    console.log("submit");
+    history.push("/tools");
+
+    dispatch(createTool({ title: title, quantity: quantity, photo }));
   };
 
   return (
@@ -60,6 +102,7 @@ const NewTool: React.FC = () => {
           labelPlacement="floating"
           helperText="Enter a tool title"
           errorText="Invalid tool title"
+          value={title}
           onIonInput={(event) => {
             setTitle(event.detail.value!);
             setIsTitleValid(validateTitle(event.detail.value!));
@@ -76,9 +119,12 @@ const NewTool: React.FC = () => {
           labelPlacement="floating"
           helperText="Enter a quantity"
           errorText="Invalid quantity"
+          value={quantity}
           onIonInput={(event) => {
-            setQuantity(event.detail.value!);
-            setIsQuantityValid(validateQuantity(event.detail.value!));
+            const value = event?.detail?.value;
+            let parsedValue = parseInt(value || "0");
+            setQuantity(parsedValue);
+            setIsQuantityValid(validateQuantity(parsedValue));
           }}
           onIonBlur={() => setIsQuantityTouched(true)}
         ></IonInput>
@@ -99,7 +145,10 @@ const NewTool: React.FC = () => {
             Take Photo
           </IonButton>
         )}
-        <IonButton expand="full" onClick={submit}>
+        <IonButton expand="full" onClick={scanToolQRCodeHandler}>
+          Scan Tool QR-Code
+        </IonButton>
+        <IonButton expand="full" onClick={submitNewTool}>
           Create Tool
         </IonButton>
       </IonContent>
