@@ -76,10 +76,6 @@ const App: React.FC = () => (
                   path="/"
                   render={(props) => <ProtectedRoute children={<Home />} />}
                 ></IonRoute>
-                <IonRoute
-                  exact
-                  render={(props) => <Redirect to="/" />}
-                ></IonRoute>
               </IonRouterOutlet>
             </AuthProvider>
           </StorageProvider>

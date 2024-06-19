@@ -1,7 +1,7 @@
 import React from "react";
-import { Route, Redirect } from "react-router-dom";
+import { Redirect } from "react-router";
 import { useAuth } from "../providers/AuthContext";
-import { IonRoute } from "@ionic/react";
+import { IonPage, IonRoute } from "@ionic/react";
 
 const ProtectedRoute = ({
   children,
@@ -12,7 +12,11 @@ const ProtectedRoute = ({
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Redirect to="/login" />;
+    return (
+      <IonPage>
+        <Redirect to="/login" />
+      </IonPage>
+    );
   }
 
   return children;
