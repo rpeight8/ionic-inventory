@@ -16,6 +16,6 @@ type Toolbox = {
   tools: Tool[];
 };
 
-type IonicIcon = (typeof icons)[keyof typeof icons];
+type Icon = (typeof icons)[keyof typeof icons];
 
-export type { Tool, NewTool, Toolbox, IonicIcon };
+export type { Tool, NewTool, Toolbox, Icon };

@@ -1,8 +1,9 @@
 import { IonContent, IonPage } from "@ionic/react";
-import React from "react";
+import SubpageHeader from "../../components/PageHeaders/SubpageHeader/SubpageHeader";
 
 const Toolboxes = () => (
   <IonPage>
+    <SubpageHeader title="Toolboxes" />
     <IonContent id="main-content">
       <h1>Toolboxes</h1>
     </IonContent>

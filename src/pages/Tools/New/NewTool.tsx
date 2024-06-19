@@ -5,6 +5,7 @@ import { createTool } from "../../../store/slices/toolsSlice";
 import "./NewTool.css";
 import { AppDispatch } from "../../../store";
 import { useDispatch } from "react-redux";
+import SubpageHeader from "../../../components/PageHeaders/SubpageHeader/SubpageHeader";
 
 const NewTool: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -47,6 +48,7 @@ const NewTool: React.FC = () => {
 
   return (
     <IonPage>
+      <SubpageHeader title="New Tool" />
       <IonContent id="main-content">
         <IonInput
           className={`${isTitleValid && "ion-valid"} ${
