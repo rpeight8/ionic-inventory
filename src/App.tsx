@@ -1,5 +1,10 @@
 import { Redirect, Route, Switch } from "react-router-dom";
-import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
+import {
+  IonApp,
+  IonRoute,
+  IonRouterOutlet,
+  setupIonicReact,
+} from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import Home from "./pages/Home/Home";
 
@@ -38,6 +43,8 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import store from "./store";
 import { Provider } from "react-redux";
 import { StorageProvider } from "./providers/StorageContext";
+import Tools from "./pages/Tools/Tools";
+import NewTool from "./pages/Tools/New/NewTool";
 
 setupIonicReact();
 
@@ -49,13 +56,30 @@ const App: React.FC = () => (
           <StorageProvider>
             <AuthProvider>
               <IonRouterOutlet>
-                <Route path="/login">
-                  <LoginPage />
-                </Route>
-                <ProtectedRoute path="/app">
-                  <Home />
-                </ProtectedRoute>
-                <Redirect to="/app/tools" />
+                <IonRoute
+                  path="/login"
+                  exact
+                  render={(props) => <LoginPage />}
+                ></IonRoute>
+                <IonRoute
+                  exact
+                  path="/tools"
+                  render={(props) => <ProtectedRoute children={<Tools />} />}
+                ></IonRoute>
+                <IonRoute
+                  exact
+                  path="/tools/new"
+                  render={(props) => <ProtectedRoute children={<NewTool />} />}
+                ></IonRoute>
+                <IonRoute
+                  exact
+                  path="/"
+                  render={(props) => <ProtectedRoute children={<Home />} />}
+                ></IonRoute>
+                <IonRoute
+                  exact
+                  render={(props) => <Redirect to="/" />}
+                ></IonRoute>
               </IonRouterOutlet>
             </AuthProvider>
           </StorageProvider>
