@@ -6,13 +6,9 @@ type Task = {
 };
 
 const processTask = async (task: Task): Promise<void> => {
-  try {
-    await task.action();
-    for (const dependency of task.dependencies) {
-      await processTask(dependency);
-    }
-  } catch (error) {
-    throw error;
+  await task.action();
+  for (const dependency of task.dependencies) {
+    await processTask(dependency);
   }
 };
 
@@ -32,12 +28,8 @@ class TaskQueue {
       if (!task) {
         continue;
       }
-      try {
-        await task();
-      } catch (error) {
-        console.error("Task failed:", error);
-        throw error;
-      }
+
+      await task();
     }
 
     this.isProcessingQueue = false;
@@ -51,6 +43,7 @@ class TaskQueue {
           resolve();
         } catch (error) {
           reject(error);
+          throw error;
         }
       };
 
@@ -61,12 +54,7 @@ class TaskQueue {
   public async processNextTask(): Promise<void> {
     const task = this.taskQueue.dequeue();
     if (task) {
-      try {
-        await task();
-      } catch (error) {
-        console.error("Task failed:", error);
-        throw error;
-      }
+      await task();
     }
   }
 

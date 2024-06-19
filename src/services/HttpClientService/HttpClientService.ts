@@ -1,20 +1,36 @@
 import { CapacitorHttp } from "@capacitor/core";
+import BasicError from "./errors/BasicError";
+import NetworkConnectionError from "./errors/NetworkConnectionError";
+import UnhandledError from "./errors/UnhandledError";
+import type { BasicError as BasicErrorType } from "./errors/BasicError";
+import type { NetworkConnectionError as NetworkConnectionErrorType } from "./errors/NetworkConnectionError";
+import type { UnhandledError as UnhandledErrorType } from "./errors/UnhandledError";
 
 type HttpClientConfig = {
   useBaseUrl?: boolean;
   headers?: { [key: string]: string };
 };
 
+type Error = BasicErrorType | NetworkConnectionErrorType | UnhandledErrorType;
+
 type HttpClient = {
   get<T>(
     url: string,
     params?: Record<string, any>,
     config?: HttpClientConfig
-  ): Promise<T>;
-  post<T>(url: string, body: any, config?: HttpClientConfig): Promise<T>;
-  ping<T>(url: string, config?: HttpClientConfig): Promise<T>;
-  put<T>(url: string, body: any, config?: HttpClientConfig): Promise<T>;
-  delete<T>(url: string, config?: HttpClientConfig): Promise<T>;
+  ): Promise<[T] | [T, Error]>;
+  post<T>(
+    url: string,
+    body: any,
+    config?: HttpClientConfig
+  ): Promise<[T] | [T, Error]>;
+  ping<T>(url: string, config?: HttpClientConfig): Promise<[T] | [T, Error]>;
+  put<T>(
+    url: string,
+    body: any,
+    config?: HttpClientConfig
+  ): Promise<[T] | [T, Error]>;
+  delete<T>(url: string, config?: HttpClientConfig): Promise<[T] | [T, Error]>;
   setBaseUrl(url: string): void;
   getBaseUrl(): string | undefined;
 };
@@ -37,11 +53,15 @@ const HttpClientService: HttpClient = {
         url: fullUrl,
         method: "GET",
         headers: config.headers,
+      }).catch((error) => {
+        throw new NetworkConnectionError(error.message);
       });
 
       return handleResponse(response);
     } catch (error) {
-      handleError(error);
+      if (error instanceof Error) {
+        return [, new UnhandledError(error.message)];
+      }
     }
   },
 
@@ -53,15 +73,17 @@ const HttpClientService: HttpClient = {
       };
       const fullUrl = buildUrl(url, config.useBaseUrl === false ? "" : baseUrl);
       const response = await CapacitorHttp.request({
-        url: fullUrl,
+        url: fullUrl + "sdasd",
         method: "POST",
         headers: config.headers,
         data: body,
+      }).catch((error) => {
+        throw new NetworkConnectionError(error.message);
       });
 
       return handleResponse(response);
     } catch (error) {
-      handleError(error);
+      return [, handleError(error)];
     }
   },
 
@@ -73,11 +95,13 @@ const HttpClientService: HttpClient = {
         method: "PUT",
         data: body,
         headers: config.headers,
+      }).catch((error) => {
+        throw new NetworkConnectionError(error.message);
       });
 
       return handleResponse(response);
     } catch (error) {
-      handleError(error);
+      return [, handleError(error)];
     }
   },
 
@@ -88,11 +112,13 @@ const HttpClientService: HttpClient = {
         url: fullUrl,
         method: "DELETE",
         headers: config.headers,
+      }).catch((error) => {
+        throw new NetworkConnectionError(error.message);
       });
 
       return handleResponse(response);
     } catch (error) {
-      handleError(error);
+      return [, handleError(error)];
     }
   },
 
@@ -106,11 +132,13 @@ const HttpClientService: HttpClient = {
         url: fullUrl,
         method: "POST",
         headers: config.headers,
+      }).catch((error) => {
+        throw new NetworkConnectionError(error.message);
       });
 
       return handleResponse(response);
     } catch (error) {
-      handleError(error);
+      return [, handleError(error)];
     }
   },
 
@@ -146,10 +174,30 @@ function handleResponse(response: any) {
   }
 }
 
-function handleError(error: any) {
-  console.error("HTTP request failed:", error);
-  throw error;
+function handleError(error: unknown): Error {
+  if (
+    error instanceof NetworkConnectionError ||
+    error instanceof BasicError ||
+    error instanceof UnhandledError
+  ) {
+    return error;
+  }
+
+  let message = "Unhandled error";
+  if (error instanceof Error) {
+    message = error.message;
+  }
+
+  return new UnhandledError(message);
 }
 
 export default HttpClientService;
-export type { HttpClient, HttpClientConfig };
+export { BasicError, NetworkConnectionError, UnhandledError };
+export type {
+  HttpClient,
+  HttpClientConfig,
+  Error,
+  BasicErrorType,
+  NetworkConnectionErrorType,
+  UnhandledErrorType,
+};

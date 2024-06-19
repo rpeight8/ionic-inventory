@@ -1,4 +1,13 @@
-import HttpClientService from "./HttpClientService";
+import HttpClientService, {
+  NetworkConnectionError,
+  BasicError,
+  UnhandledError,
+} from "./HttpClientService/HttpClientService";
+import type {
+  NetworkConnectionErrorType,
+  BasicErrorType,
+  UnhandledErrorType,
+} from "./HttpClientService/HttpClientService";
 import StorageService from "./StorageService";
 // import store from "../store";
 import { NewTool, Tool, Toolbox } from "../types";
@@ -32,7 +41,12 @@ const DataManagerService: DataManagerService = {
     try {
       let tools = await StorageService.getTools();
       try {
-        tools = await HttpClientService.get<Tool[]>("/tools");
+        const resp = await HttpClientService.get<Tool[]>("/tools");
+
+        if (resp[1]) {
+          throw resp[1];
+        }
+
         tools = await LocalServerConverterService.toLocal(tools);
         await StorageService.setTools(tools);
       } catch (error) {
@@ -41,8 +55,8 @@ const DataManagerService: DataManagerService = {
 
       return tools;
     } catch (error) {
-      console.error("Failed to load tools", error);
-      throw new Error("Failed to load tools");
+      console.error("Failed to fetch Tools even locally", error);
+      throw new Error("Failed to fetch Tools even locally");
     }
   },
 
@@ -55,24 +69,26 @@ const DataManagerService: DataManagerService = {
 
       SyncService.queueTask({
         action: async () => {
-          await HttpClientService.post<Tool>("/tools", {
-            ...tool,
-          }).then(async (response) => {
-            LocalServerConverterService.addLocalServerMappingEntry(
-              id,
-              response.id
-            );
-          });
+          const [createdTool, err] = await HttpClientService.post<Tool>(
+            "/tools",
+            {
+              ...tool,
+            }
+          );
+
+          if (err) {
+            throw err;
+          }
         },
         dependencies: [],
       }).catch((error: unknown) => {
-        console.error("Failed to create Tool", error);
+        console.error("Failed to create tool", error);
       });
       SyncService.sync();
       return createdTool;
     } catch (error) {
-      console.error("Failed to create tool", error);
-      throw new Error("Failed to create tool");
+      console.error("Failed to fetch Tools even locally", error);
+      throw new Error("Failed to fetch Tools even locally");
     }
   },
 

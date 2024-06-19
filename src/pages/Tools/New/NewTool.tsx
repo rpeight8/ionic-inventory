@@ -78,14 +78,15 @@ const NewTool: React.FC = () => {
     setPhoto(undefined);
   }, [setPhoto]);
 
-  const submitNewTool = () => {
+  const submitNewTool = async () => {
     if (!isTitleValid || !isQuantityValid) {
       return;
     }
 
-    history.push("/tools");
-
-    dispatch(createTool({ title: title, quantity: quantity, photo }));
+    const res = await dispatch(
+      createTool({ title: title, quantity: quantity, photo })
+    );
+    console.log(res);
   };
 
   return (
