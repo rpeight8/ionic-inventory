@@ -6,7 +6,7 @@ const queue = new TaskQueue();
 
 type SyncService = {
   sync: () => Promise<unknown>;
-  queueTask: (task: Task) => Promise<unknown>;
+  queueTask: <R>(task: Task<R>) => Promise<unknown>;
   isSyncAvailable: () => Promise<boolean>;
 };
 
@@ -15,6 +15,14 @@ NetworkStatusService.addListener("networkStatusChange", async (status) => {
     await SyncService.sync();
   }
 });
+
+const queueTask = async <R>(action: Task<R>) => {
+  return await queue.queueTask(action);
+};
+
+const isSyncAvailable = async () => {
+  return (await NetworkStatusService.getStatus()).connected;
+};
 
 const SyncService: SyncService = {
   sync: async () => {
@@ -30,12 +38,8 @@ const SyncService: SyncService = {
       }
     }
   },
-  queueTask: async (action: Task) => {
-    return await queue.queueTask(action);
-  },
-  isSyncAvailable: async () => {
-    return (await NetworkStatusService.getStatus()).connected;
-  },
+  queueTask,
+  isSyncAvailable,
 };
 
 export default SyncService;

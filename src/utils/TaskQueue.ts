@@ -1,12 +1,15 @@
 import Queue from "./Queue";
 
-type Task = {
-  action: () => Promise<void>;
-  dependencies: Task[];
+type Task<R> = {
+  action: () => Promise<R>;
+  dependencies?: Task<void>[];
 };
 
-const processTask = async (task: Task): Promise<void> => {
+const processTask = async <R>(task: Task<R>): Promise<void> => {
   await task.action();
+  if (!task.dependencies) {
+    return;
+  }
   for (const dependency of task.dependencies) {
     await processTask(dependency);
   }
@@ -35,12 +38,12 @@ class TaskQueue {
     this.isProcessingQueue = false;
   }
 
-  public queueTask(task: Task): Promise<unknown> {
-    return new Promise<void>((resolve, reject) => {
+  public queueTask<R>(task: Task<R>, autoProcess: boolean = false): Promise<R> {
+    const promise = new Promise<R>((resolve, reject) => {
       const taskWrapper = async () => {
         try {
-          await processTask(task);
-          resolve();
+          const res = await processTask(task);
+          resolve(res as R);
         } catch (error) {
           reject(error);
           throw error;
@@ -49,6 +52,12 @@ class TaskQueue {
 
       this.taskQueue.enqueue(taskWrapper);
     });
+
+    if (autoProcess) {
+      this.processQueue();
+    }
+
+    return promise;
   }
 
   public async processNextTask(): Promise<void> {

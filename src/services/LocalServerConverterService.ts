@@ -1,3 +1,5 @@
+// TODO: When to clean up the mappings?
+
 import { v4 as uuidv4 } from "uuid";
 
 type LocalServerConverterService = {
@@ -7,6 +9,7 @@ type LocalServerConverterService = {
     localId: string,
     serverId: string
   ) => Promise<void>;
+  initialize: () => Promise<void>;
 };
 
 type IdMapping = Record<string, string>;
@@ -18,8 +21,9 @@ type IdMappingResult = {
 };
 
 type StorageService = {
-  setIdMapping: (idMapping: LocalToServerMapping) => Promise<void>;
+  setIdMapping: (idMapping: LocalToServerMapping) => Promise<unknown>;
   getIdMapping: () => Promise<IdMappingResult>;
+  initialize: () => Promise<unknown>;
 };
 
 const createLocalServerConverterService = (
@@ -29,6 +33,20 @@ const createLocalServerConverterService = (
   let serverToLocalMapping: Record<string, string> | undefined;
 
   let dirty = false;
+
+  let initialized = false;
+
+  const initialize = async () => {
+    if (initialized) return;
+
+    try {
+      await storageService.initialize();
+      initialized = true;
+    } catch (error) {
+      console.error("Failed to initialize storage service", error);
+      throw new Error("Failed to initialize storage service");
+    }
+  };
 
   const loadMappings = async () => {
     const { localToServer, serverToLocal } =
@@ -40,6 +58,10 @@ const createLocalServerConverterService = (
   const toLocal = async <S extends { id: string }>(
     entities: S[]
   ): Promise<S[]> => {
+    if (!initialized) {
+      throw new Error("Service is not initialized");
+    }
+
     if (!localToServerMapping || !serverToLocalMapping || dirty) {
       await loadMappings();
       dirty = false;
@@ -78,6 +100,10 @@ const createLocalServerConverterService = (
   const toServer = async <L extends { id: string }>(
     entities: L[]
   ): Promise<L[]> => {
+    if (!initialized) {
+      throw new Error("Service is not initialized");
+    }
+
     if (!localToServerMapping || dirty) {
       await loadMappings();
       dirty = false;
@@ -108,6 +134,10 @@ const createLocalServerConverterService = (
     localId: string,
     serverId: string
   ) => {
+    if (!initialized) {
+      throw new Error("Service is not initialized");
+    }
+
     if (!localToServerMapping || !serverToLocalMapping) {
       await loadMappings();
     }
@@ -126,6 +156,7 @@ const createLocalServerConverterService = (
     toLocal,
     toServer,
     addLocalServerMappingEntry,
+    initialize,
   };
 };
 

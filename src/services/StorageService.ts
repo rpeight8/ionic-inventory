@@ -1,6 +1,10 @@
 import CordovaSQLiteDriver from "localforage-cordovasqlitedriver";
 import { Drivers, Storage as IonicStorage } from "@ionic/storage";
 import type { Tool } from "../types";
+import TaskQueue from "../utils/TaskQueue";
+import type { Task } from "../utils/TaskQueue";
+
+const queue = new TaskQueue();
 
 type IdMapping = Record<string, string>;
 type LocalToServerMapping = IdMapping;
@@ -14,48 +18,14 @@ type StorageService = {
   initialize: () => Promise<void>;
   getDriver: () => string | undefined;
   getTools: () => Promise<Tool[]>;
-  setTools: (tools: Tool[]) => Promise<void>;
-  addTool: (tool: Tool) => Promise<void>;
-  createTool: (tool: Tool) => Promise<void>;
-  setIdMapping: (idMapping: LocalToServerMapping) => Promise<void>;
+  setTools: (tools: Tool[]) => Promise<unknown>;
+  addTool: (tool: Tool) => Promise<unknown>;
+  createTool: (tool: Tool) => Promise<unknown>;
+  setIdMapping: (idMapping: LocalToServerMapping) => Promise<unknown>;
   getIdMapping: () => Promise<IdMappingResult>;
 };
 
 let storage: IonicStorage | undefined;
-let taskQueue: (() => Promise<void>)[] = [];
-let isProcessingQueue = false;
-
-const processQueue = async () => {
-  if (isProcessingQueue) {
-    return;
-  }
-
-  isProcessingQueue = true;
-
-  while (taskQueue.length > 0) {
-    const task = taskQueue.shift();
-    if (task) {
-      await task();
-    }
-  }
-
-  isProcessingQueue = false;
-};
-
-const queueTask = <T>(task: () => Promise<T>): Promise<T> => {
-  return new Promise<T>((resolve, reject) => {
-    taskQueue.push(async () => {
-      try {
-        const result = await task();
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
-    });
-
-    processQueue();
-  });
-};
 
 const initializeInternal = async () => {
   if (!storage) {
@@ -137,27 +107,54 @@ const setIdMappingInternal = async (idMapping: LocalToServerMapping) => {
 
 const StorageService: StorageService = {
   async initialize() {
+    if (storage) {
+      return;
+    }
+
     return initializeInternal();
   },
 
   getDriver() {
+    if (!storage) {
+      return undefined;
+    }
     return storage ? storage.driver ?? undefined : undefined;
   },
 
   async getTools() {
-    return queueTask(() => getToolsInternal());
+    return queue.queueTask(
+      {
+        action: () => getToolsInternal(),
+      },
+      true
+    );
   },
 
   async setTools(tools: Tool[]) {
-    return queueTask(() => setToolsInternal(tools));
+    return queue.queueTask(
+      {
+        action: () => setToolsInternal(tools),
+      },
+      true
+    );
   },
 
   async createTool(tool: Tool) {
-    return queueTask(() => createToolInternal(tool));
+    return queue.queueTask(
+      {
+        action: () => createToolInternal(tool),
+      },
+      true
+    );
   },
 
   async addTool(tool: Tool) {
-    return queueTask(() => addToolInternal(tool));
+    return queue.queueTask(
+      {
+        action: () => addToolInternal(tool),
+      },
+      true
+    );
   },
 
   async setIdMapping(idMapping: Record<string, string>) {

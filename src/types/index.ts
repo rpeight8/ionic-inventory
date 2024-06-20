@@ -1,5 +1,9 @@
 import * as icons from "ionicons/icons";
 
+type Local<T> = {
+  synced: boolean;
+} & T;
+
 type Tool = {
   id: string;
   title: string;
@@ -8,7 +12,11 @@ type Tool = {
   photo?: string;
 };
 
+type LocalTool = Local<Tool>;
+
 type NewTool = Omit<Tool, "id">;
+
+type LocalNewTool = Local<NewTool>;
 
 type Toolbox = {
   id: string;
@@ -16,6 +24,17 @@ type Toolbox = {
   tools: Tool[];
 };
 
+type LocalToolbox = Local<Toolbox>;
+
 type Icon = (typeof icons)[keyof typeof icons];
 
-export type { Tool, NewTool, Toolbox, Icon };
+export type {
+  Tool,
+  NewTool,
+  Toolbox,
+  Icon,
+  Local,
+  LocalTool,
+  LocalNewTool,
+  LocalToolbox,
+};

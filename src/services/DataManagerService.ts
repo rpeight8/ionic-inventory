@@ -85,7 +85,6 @@ const DataManagerService: DataManagerService = {
             createdTool.id
           );
         },
-        dependencies: [],
       }).catch((error: unknown) => {
         console.error("Failed to create tool", error);
       });
