@@ -49,10 +49,26 @@ export class DAG<T> implements IDAG<T> {
   }
 
   removeNode(id: ID): void {
+    // Remove the node itself
     this.nodes = this.nodes.filter((node) => node.id !== id);
+
+    // Get all outgoing edges from the node to be removed
+    const outgoingEdges = this.getOutgoingEdges(id);
+
+    // Remove all edges connected to the node
     this.edges = this.edges.filter(
       (edge) => edge.from !== id && edge.to !== id
     );
+
+    // Recursively remove child nodes that are no longer connected
+    outgoingEdges.forEach((edge) => {
+      const childNodeId = edge.to;
+      const childNode = this.findNode(childNodeId);
+
+      if (childNode && !this.hasIncomingEdges(childNodeId)) {
+        this.removeNode(childNodeId);
+      }
+    });
   }
 
   getIncomingEdges(id: ID): Edge[] {
@@ -143,7 +159,11 @@ export class DAG<T> implements IDAG<T> {
 
     return debugObject;
   }
+
+  private hasIncomingEdges(id: ID): boolean {
+    return this.edges.some((edge) => edge.to === id);
+  }
 }
 
 export default DAG;
-export type { Node, Edge, IDAG };
+export type { Node, Edge, IDAG, ID };
