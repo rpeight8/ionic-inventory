@@ -1,135 +1,63 @@
-import HttpClientService, {
-  NetworkConnectionError,
-  BasicError,
-  UnhandledError,
-} from "./HttpClientService/HttpClientService";
-import type {
-  NetworkConnectionErrorType,
-  BasicErrorType,
-  UnhandledErrorType,
-} from "./HttpClientService/HttpClientService";
 import StorageService from "./StorageService";
-// import store from "../store";
+import type { StorageServiceType } from "./StorageService";
 import { NewTool, Tool, Toolbox } from "../types";
-import createLocalServerConverterService from "./LocalServerConverterService";
-import SyncService from "./SyncService";
 import { v4 as uuidv4 } from "uuid";
+import LocalServerConverterService from "./LocalServerConverterService";
 
-type LocalServerConverterService = {
-  toLocal<S extends { id: string }>(entities: S[]): Promise<S[]>;
-  toServer<L extends { id: string }>(entities: L[]): Promise<L[]>;
-  addLocalServerMappingEntry: (
-    localId: string,
-    serverId: string
-  ) => Promise<void>;
-};
+class DataManagerService {
+  private static instance: DataManagerService;
+  private storageService: StorageServiceType;
+  private localServerConverterService: LocalServerConverterService<any, any>;
 
-type DataManagerService = {
-  fetchTools: () => Promise<Tool[]>;
-  createTool: (tool: NewTool) => Promise<Tool>;
-  // loadToolboxes: () => Promise<Toolbox[]>;
-  createToolbox: (toolbox: Toolbox) => Promise<void>;
-};
+  private constructor({
+    StorageService,
+    LocalServerConverterService,
+  }: {
+    StorageService: StorageServiceType;
+    LocalServerConverterService: LocalServerConverterService<any, any>;
+  }) {
+    this.storageService = StorageService;
+    this.localServerConverterService = LocalServerConverterService;
+  }
 
-const LocalServerConverterService: LocalServerConverterService =
-  createLocalServerConverterService(StorageService);
-
-HttpClientService.setBaseUrl("http://localhost:3000");
-
-const DataManagerService: DataManagerService = {
-  fetchTools: async (): Promise<Tool[]> => {
-    try {
-      let tools = await StorageService.getTools();
-      try {
-        const resp = await HttpClientService.get<Tool[]>("/tools");
-
-        if (resp[1]) {
-          throw resp[1];
-        }
-
-        tools = await LocalServerConverterService.toLocal(resp[0]);
-        await StorageService.setTools(tools);
-      } catch (error) {
-        console.error("Failed to fetch tools", error);
-      }
-
-      return tools;
-    } catch (error) {
-      console.error("Failed to fetch Tools even locally", error);
-      throw new Error("Failed to fetch Tools even locally");
-    }
-  },
-
-  createTool: async (tool: NewTool): Promise<Tool> => {
-    try {
-      const id = uuidv4();
-      const createdTool = { ...tool, id };
-
-      await StorageService.addTool(createdTool);
-
-      SyncService.queueTask({
-        action: async () => {
-          const [createdTool, err] = await HttpClientService.post<Tool>(
-            "/tools",
-            {
-              ...tool,
-            }
-          );
-
-          if (err) {
-            throw err;
-          }
-
-          await LocalServerConverterService.addLocalServerMappingEntry(
-            id,
-            createdTool.id
-          );
-        },
-      }).catch((error: unknown) => {
-        console.error("Failed to create tool", error);
+  public static getInstance({
+    StorageService,
+    LocalServerConverterService,
+  }: {
+    StorageService: StorageServiceType;
+    LocalServerConverterService: LocalServerConverterService<any, any>;
+  }): DataManagerService {
+    if (!DataManagerService.instance) {
+      DataManagerService.instance = new DataManagerService({
+        StorageService,
+        LocalServerConverterService,
       });
-      SyncService.sync();
-      return createdTool;
-    } catch (error) {
-      console.error("Failed to fetch Tools even locally", error);
-      throw new Error("Failed to fetch Tools even locally");
     }
-  },
+    return DataManagerService.instance;
+  }
 
-  // const loadToolboxes = async (): Promise<Toolbox[]> => {
-  //   try {
-  //     let toolboxes = await StorageService.getToolboxes();
-  //     try {
-  //       toolboxes = await HttpClientService.get<Toolbox[]>(
-  //         "http://localhost:3000/toolboxes"
-  //       );
+  public async initialize(): Promise<void> {
+    await Promise.all([
+      this.storageService.initialize(),
+      this.localServerConverterService.initialize(),
+    ]);
+    return;
+  }
 
-  //       await StorageService.setToolboxes(toolboxes);
-  //     } catch (error) {
-  //       console.error("Failed to fetch toolboxes", error);
-  //     }
+  public async fetchTools(): Promise<Tool[]> {
+    const tools = await this.storageService.getTools();
+    return tools;
+  }
 
-  //     return toolboxes;
-  //   } catch (error) {
-  //     console.error("Failed to load toolboxes", error);
-  //     throw new Error("Failed to load toolboxes");
-  //   }
-  // };
+  public async createTool(tool: NewTool): Promise<Tool> {
+    const newTool: Tool = {
+      ...tool,
+      id: uuidv4(),
+    };
 
-  createToolbox: async (toolbox: Toolbox): Promise<void> => {
-    try {
-      await fetch("/api/toolboxes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(toolbox),
-      });
-    } catch (error) {
-      console.error("Failed to create toolbox", error);
-      throw new Error("Failed to create toolbox");
-    }
-  },
-};
+    await this.storageService.addTool(newTool);
+    return newTool;
+  }
+}
 
 export default DataManagerService;

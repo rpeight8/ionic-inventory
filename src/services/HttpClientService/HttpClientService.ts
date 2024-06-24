@@ -13,40 +13,43 @@ type HttpClientConfig = {
 
 type Error = BasicErrorType | NetworkConnectionErrorType | UnhandledErrorType;
 
-type HttpClient = {
+interface IHttpClient {
   get<T>(
     url: string,
     params?: Record<string, any>,
     config?: HttpClientConfig
-  ): Promise<[T] | [T, Error]>;
+  ): Promise<[T] | [void, Error]>;
   post<T>(
     url: string,
     body: any,
     config?: HttpClientConfig
-  ): Promise<[T] | [T, Error]>;
-  ping<T>(url: string, config?: HttpClientConfig): Promise<[T] | [T, Error]>;
+  ): Promise<[T] | [void, Error]>;
+  ping<T>(url: string, config?: HttpClientConfig): Promise<[T] | [void, Error]>;
   put<T>(
     url: string,
     body: any,
     config?: HttpClientConfig
-  ): Promise<[T] | [T, Error]>;
-  delete<T>(url: string, config?: HttpClientConfig): Promise<[T] | [T, Error]>;
+  ): Promise<[T] | [void, Error]>;
+  delete<T>(
+    url: string,
+    config?: HttpClientConfig
+  ): Promise<[T] | [void, Error]>;
   setBaseUrl(url: string): void;
   getBaseUrl(): string | undefined;
-};
+}
 
-let baseUrl: string | undefined;
+class HttpClientService implements IHttpClient {
+  private baseUrl: string | undefined;
 
-const HttpClientService: HttpClient = {
-  async get<T>(
+  public async get<T>(
     url: string,
     params: Record<string, any> = {},
     config: HttpClientConfig = {}
-  ) {
+  ): Promise<[T] | [void, Error]> {
     try {
-      const fullUrl = buildUrl(
+      const fullUrl = this.buildUrl(
         url,
-        config.useBaseUrl === false ? "" : baseUrl,
+        config.useBaseUrl === false ? "" : this.baseUrl,
         params
       );
       const response = await CapacitorHttp.request({
@@ -57,19 +60,26 @@ const HttpClientService: HttpClient = {
         throw new NetworkConnectionError(error.message);
       });
 
-      return handleResponse(response);
+      return this.handleResponse(response);
     } catch (error) {
-      return [, handleError(error)];
+      return [, this.handleError(error)];
     }
-  },
+  }
 
-  async post<T>(url: string, body: any, config: HttpClientConfig = {}) {
+  public async post<T>(
+    url: string,
+    body: any,
+    config: HttpClientConfig = {}
+  ): Promise<[T] | [void, Error]> {
     try {
       config.headers = {
         "Content-Type": "application/json",
         ...config.headers,
       };
-      const fullUrl = buildUrl(url, config.useBaseUrl === false ? "" : baseUrl);
+      const fullUrl = this.buildUrl(
+        url,
+        config.useBaseUrl === false ? "" : this.baseUrl
+      );
       const response = await CapacitorHttp.request({
         url: fullUrl,
         method: "POST",
@@ -79,15 +89,22 @@ const HttpClientService: HttpClient = {
         throw new NetworkConnectionError(error.message);
       });
 
-      return handleResponse(response);
+      return this.handleResponse(response);
     } catch (error) {
-      return [, handleError(error)];
+      return [, this.handleError(error)];
     }
-  },
+  }
 
-  async put<T>(url: string, body: any, config: HttpClientConfig = {}) {
+  public async put<T>(
+    url: string,
+    body: any,
+    config: HttpClientConfig = {}
+  ): Promise<[T] | [void, Error]> {
     try {
-      const fullUrl = buildUrl(url, config.useBaseUrl === false ? "" : baseUrl);
+      const fullUrl = this.buildUrl(
+        url,
+        config.useBaseUrl === false ? "" : this.baseUrl
+      );
       const response = await CapacitorHttp.request({
         url: fullUrl,
         method: "PUT",
@@ -97,15 +114,21 @@ const HttpClientService: HttpClient = {
         throw new NetworkConnectionError(error.message);
       });
 
-      return handleResponse(response);
+      return this.handleResponse(response);
     } catch (error) {
-      return [, handleError(error)];
+      return [, this.handleError(error)];
     }
-  },
+  }
 
-  async delete<T>(url: string, config: HttpClientConfig = {}) {
+  public async delete<T>(
+    url: string,
+    config: HttpClientConfig = {}
+  ): Promise<[T] | [void, Error]> {
     try {
-      const fullUrl = buildUrl(url, config.useBaseUrl === false ? "" : baseUrl);
+      const fullUrl = this.buildUrl(
+        url,
+        config.useBaseUrl === false ? "" : this.baseUrl
+      );
       const response = await CapacitorHttp.request({
         url: fullUrl,
         method: "DELETE",
@@ -114,17 +137,20 @@ const HttpClientService: HttpClient = {
         throw new NetworkConnectionError(error.message);
       });
 
-      return handleResponse(response);
+      return this.handleResponse(response);
     } catch (error) {
-      return [, handleError(error)];
+      return [, this.handleError(error)];
     }
-  },
+  }
 
-  async ping<T>(url: string | undefined = "", config: HttpClientConfig = {}) {
+  public async ping<T>(
+    url: string | undefined = "",
+    config: HttpClientConfig = {}
+  ): Promise<[T] | [void, Error]> {
     try {
-      const fullUrl = buildUrl(
+      const fullUrl = this.buildUrl(
         url || "/utils/ping",
-        config.useBaseUrl === false ? "" : baseUrl
+        config.useBaseUrl === false ? "" : this.baseUrl
       );
       const response = await CapacitorHttp.request({
         url: fullUrl,
@@ -134,63 +160,63 @@ const HttpClientService: HttpClient = {
         throw new NetworkConnectionError(error.message);
       });
 
-      return handleResponse(response);
+      return this.handleResponse(response);
     } catch (error) {
-      return [, handleError(error)];
+      return [, this.handleError(error)];
     }
-  },
-
-  setBaseUrl(url: string) {
-    baseUrl = url;
-  },
-
-  getBaseUrl() {
-    return baseUrl;
-  },
-};
-
-function buildUrl(
-  url: string,
-  baseUrl?: string,
-  params?: Record<string, any>
-): string {
-  let fullUrl = baseUrl ? `${baseUrl}${url}` : url;
-  if (params && Object.keys(params).length > 0) {
-    const queryString = new URLSearchParams(params).toString();
-    fullUrl += `?${queryString}`;
   }
-  return fullUrl;
+
+  public setBaseUrl(url: string): void {
+    this.baseUrl = url;
+  }
+
+  public getBaseUrl(): string | undefined {
+    return this.baseUrl;
+  }
+
+  private buildUrl(
+    url: string,
+    baseUrl?: string,
+    params?: Record<string, any>
+  ): string {
+    let fullUrl = baseUrl ? `${baseUrl}${url}` : url;
+    if (params && Object.keys(params).length > 0) {
+      const queryString = new URLSearchParams(params).toString();
+      fullUrl += `?${queryString}`;
+    }
+    return fullUrl;
+  }
+
+  private handleResponse(response: any): [any] | [any, Error] {
+    if (response.status >= 200 && response.status < 300) {
+      return [response.data];
+    }
+
+    return [, new BasicError(response.data, response.status)];
+  }
+
+  private handleError(error: unknown): Error {
+    if (
+      error instanceof NetworkConnectionError ||
+      error instanceof BasicError ||
+      error instanceof UnhandledError
+    ) {
+      return error;
+    }
+
+    let message = "Unhandled error";
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
+    return new UnhandledError(message);
+  }
 }
 
-function handleResponse(response: any): [any] | [any, Error] {
-  if (response.status >= 200 && response.status < 300) {
-    return [response.data];
-  }
-
-  return [, new BasicError(response.data, response.status)];
-}
-
-function handleError(error: unknown): Error {
-  if (
-    error instanceof NetworkConnectionError ||
-    error instanceof BasicError ||
-    error instanceof UnhandledError
-  ) {
-    return error;
-  }
-
-  let message = "Unhandled error";
-  if (error instanceof Error) {
-    message = error.message;
-  }
-
-  return new UnhandledError(message);
-}
-
-export default HttpClientService;
+export default new HttpClientService();
 export { BasicError, NetworkConnectionError, UnhandledError };
 export type {
-  HttpClient,
+  IHttpClient,
   HttpClientConfig,
   Error,
   BasicErrorType,

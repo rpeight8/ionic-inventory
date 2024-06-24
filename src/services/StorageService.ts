@@ -14,157 +14,211 @@ type IdMappingResult = {
   serverToLocal: ServerToLocalMapping;
 };
 
-type StorageService = {
+type StorageServiceType = {
   initialize: () => Promise<void>;
   getDriver: () => string | undefined;
   getTools: () => Promise<Tool[]>;
   setTools: (tools: Tool[]) => Promise<unknown>;
   addTool: (tool: Tool) => Promise<unknown>;
   createTool: (tool: Tool) => Promise<unknown>;
+  getScheduledActions: () => Promise<any[]>;
+  setScheduledActions: (scheduledActions: any[]) => Promise<unknown>;
   setIdMapping: (idMapping: LocalToServerMapping) => Promise<unknown>;
   getIdMapping: () => Promise<IdMappingResult>;
 };
 
-let storage: IonicStorage | undefined;
+class StorageService implements StorageServiceType {
+  private static instance: StorageService;
+  private storage: IonicStorage | undefined;
+  private initialized = false;
 
-const initializeInternal = async () => {
-  if (!storage) {
-    storage = new IonicStorage({
+  private constructor() {
+    // Private constructor to enforce singleton pattern
+  }
+
+  public static getInstance(): StorageService {
+    if (!StorageService.instance) {
+      StorageService.instance = new StorageService();
+    }
+    return StorageService.instance;
+  }
+
+  public async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    this.storage = new IonicStorage({
       driverOrder: [
         CordovaSQLiteDriver._driver,
         Drivers.IndexedDB,
         Drivers.LocalStorage,
       ],
     });
-    await storage.defineDriver(CordovaSQLiteDriver);
-    await storage.create();
-  }
-};
-
-const getToolsInternal = async (): Promise<Tool[]> => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-
-  const tools = await storage.get("tools");
-  return tools ?? [];
-};
-
-const setToolsInternal = async (tools: Tool[]): Promise<void> => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-
-  await storage.set("tools", tools);
-};
-
-const createToolInternal = async (tool: Tool): Promise<void> => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-  const tools = await getToolsInternal();
-  tools.push(tool);
-  await storage.set("tools", tools);
-};
-
-const addToolInternal = async (tool: Tool): Promise<void> => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-  const tools = await getToolsInternal();
-  tools.push(tool);
-  await storage.set("tools", tools);
-};
-
-const getIdMappingInternal = async (): Promise<IdMappingResult> => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-  const localToServerMapping = Object.assign(
-    {},
-    ((await storage.get("idMapping")) ?? {}) as LocalToServerMapping
-  );
-  const serverToLocalMapping = Object.entries(localToServerMapping).reduce(
-    (acc, [key, value]) => {
-      acc[value] = key;
-      return acc;
-    },
-    {} as ServerToLocalMapping
-  );
-
-  return {
-    localToServer: localToServerMapping,
-    serverToLocal: serverToLocalMapping,
-  };
-};
-
-const setIdMappingInternal = async (idMapping: LocalToServerMapping) => {
-  if (!storage) {
-    throw new Error("Storage not initialized");
-  }
-  return await storage.set("idMapping", idMapping);
-};
-
-const StorageService: StorageService = {
-  async initialize() {
-    if (storage) {
-      return;
+    try {
+      await this.storage.defineDriver(CordovaSQLiteDriver);
+      await this.storage.create();
+      this.initialized = true;
+    } catch (error) {
+      console.error("Failed to initialize storage service", error);
+      this.initialized = false;
+      throw new Error("Failed to initialize storage service");
     }
+  }
 
-    return initializeInternal();
-  },
-
-  getDriver() {
-    if (!storage) {
+  public getDriver(): string | undefined {
+    if (!this.storage) {
       return undefined;
     }
-    return storage ? storage.driver ?? undefined : undefined;
-  },
+    return this.storage.driver ?? undefined;
+  }
 
-  async getTools() {
+  public async getTools(): Promise<Tool[]> {
     return queue.queueTask(
       {
-        action: () => getToolsInternal(),
+        action: () => this.getToolsInternal(),
       },
       true
     );
-  },
+  }
 
-  async setTools(tools: Tool[]) {
+  public async setTools(tools: Tool[]): Promise<void> {
     return queue.queueTask(
       {
-        action: () => setToolsInternal(tools),
+        action: () => this.setToolsInternal(tools),
       },
       true
     );
-  },
+  }
 
-  async createTool(tool: Tool) {
+  public async createTool(tool: Tool): Promise<void> {
     return queue.queueTask(
       {
-        action: () => createToolInternal(tool),
+        action: () => this.createToolInternal(tool),
       },
       true
     );
-  },
+  }
 
-  async addTool(tool: Tool) {
+  public async addTool(tool: Tool): Promise<void> {
     return queue.queueTask(
       {
-        action: () => addToolInternal(tool),
+        action: () => this.addToolInternal(tool),
       },
       true
     );
-  },
+  }
 
-  async setIdMapping(idMapping: Record<string, string>) {
-    return setIdMappingInternal(idMapping);
-  },
+  public async getScheduledActions(): Promise<any[]> {
+    return queue.queueTask(
+      {
+        action: () => this.getScheduledActionsInternal(),
+      },
+      true
+    );
+  }
 
-  async getIdMapping() {
-    return getIdMappingInternal();
-  },
-};
+  public async setScheduledActions(scheduledActions: any[]): Promise<void> {
+    return queue.queueTask(
+      {
+        action: () => this.setScheduledActionsInternal(scheduledActions),
+      },
+      true
+    );
+  }
 
-export default StorageService;
-export type { StorageService };
+  public async setIdMapping(idMapping: Record<string, string>): Promise<void> {
+    return this.setIdMappingInternal(idMapping);
+  }
+
+  public async getIdMapping(): Promise<IdMappingResult> {
+    return this.getIdMappingInternal();
+  }
+
+  private async getToolsInternal(): Promise<Tool[]> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+
+    const tools = await this.storage.get("tools");
+    return tools ?? [];
+  }
+
+  private async setToolsInternal(tools: Tool[]): Promise<void> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+
+    await this.storage.set("tools", tools);
+  }
+
+  private async createToolInternal(tool: Tool): Promise<void> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    const tools = await this.getToolsInternal();
+    tools.push(tool);
+    await this.storage.set("tools", tools);
+  }
+
+  private async addToolInternal(tool: Tool): Promise<void> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    const tools = await this.getToolsInternal();
+    tools.push(tool);
+    await this.storage.set("tools", tools);
+  }
+
+  private async getIdMappingInternal(): Promise<IdMappingResult> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    const localToServerMapping = Object.assign(
+      {},
+      ((await this.storage.get("idMapping")) ?? {}) as LocalToServerMapping
+    );
+    const serverToLocalMapping = Object.entries(localToServerMapping).reduce(
+      (acc, [key, value]) => {
+        acc[value] = key;
+        return acc;
+      },
+      {} as ServerToLocalMapping
+    );
+
+    return {
+      localToServer: localToServerMapping,
+      serverToLocal: serverToLocalMapping,
+    };
+  }
+
+  private async getScheduledActionsInternal(): Promise<any[]> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    const scheduledActions = await this.storage.get("scheduledActions");
+
+    return scheduledActions ?? [];
+  }
+
+  private async setScheduledActionsInternal(
+    scheduledActions: any[]
+  ): Promise<void> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    await this.storage.set("scheduledActions", scheduledActions);
+  }
+
+  private async setIdMappingInternal(
+    idMapping: LocalToServerMapping
+  ): Promise<void> {
+    if (!this.storage) {
+      throw new Error("Storage not initialized");
+    }
+    await this.storage.set("idMapping", idMapping);
+  }
+}
+
+export default StorageService.getInstance();
+export type { StorageServiceType };

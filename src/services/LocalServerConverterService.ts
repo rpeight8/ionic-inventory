@@ -1,16 +1,16 @@
-// TODO: When to clean up the mappings?
-
 import { v4 as uuidv4 } from "uuid";
+import type { StorageServiceType } from "./StorageService";
 
-type LocalServerConverterService = {
+interface ILocalServerConverterService<S, L> {
   toLocal<S extends { id: string }>(entities: S[]): Promise<S[]>;
   toServer<L extends { id: string }>(entities: L[]): Promise<L[]>;
   addLocalServerMappingEntry: (
     localId: string,
     serverId: string
   ) => Promise<void>;
+  removeLocalServerMappingEntry: (localId: string) => Promise<void>;
   initialize: () => Promise<void>;
-};
+}
 
 type IdMapping = Record<string, string>;
 type LocalToServerMapping = IdMapping;
@@ -20,54 +20,65 @@ type IdMappingResult = {
   serverToLocal: ServerToLocalMapping;
 };
 
-type StorageService = {
-  setIdMapping: (idMapping: LocalToServerMapping) => Promise<unknown>;
-  getIdMapping: () => Promise<IdMappingResult>;
-  initialize: () => Promise<unknown>;
-};
+class LocalServerConverterService<S, L>
+  implements ILocalServerConverterService<S, L>
+{
+  private static instance: LocalServerConverterService<any, any>;
+  private storageService: StorageServiceType;
+  private localToServerMapping: LocalToServerMapping | undefined;
+  private serverToLocalMapping: ServerToLocalMapping | undefined;
+  private dirty = false;
+  private initialized = false;
 
-const createLocalServerConverterService = (
-  storageService: StorageService
-): LocalServerConverterService => {
-  let localToServerMapping: Record<string, string> | undefined;
-  let serverToLocalMapping: Record<string, string> | undefined;
+  private constructor(storageService: StorageServiceType) {
+    this.storageService = storageService;
+  }
 
-  let dirty = false;
+  public static getInstance(
+    storageService: StorageServiceType
+  ): LocalServerConverterService<any, any> {
+    if (!LocalServerConverterService.instance) {
+      LocalServerConverterService.instance = new LocalServerConverterService(
+        storageService
+      );
+    }
+    return LocalServerConverterService.instance;
+  }
 
-  let initialized = false;
-
-  const initialize = async () => {
-    if (initialized) return;
+  public async initialize(): Promise<void> {
+    if (this.initialized) return;
 
     try {
-      await storageService.initialize();
-      initialized = true;
+      await this.storageService.initialize();
+      this.initialized = true;
     } catch (error) {
       console.error("Failed to initialize storage service", error);
       throw new Error("Failed to initialize storage service");
     }
-  };
+  }
 
-  const loadMappings = async () => {
+  private async loadMappings(): Promise<void> {
     const { localToServer, serverToLocal } =
-      await storageService.getIdMapping();
-    localToServerMapping = localToServer;
-    serverToLocalMapping = serverToLocal;
-  };
+      await this.storageService.getIdMapping();
+    this.localToServerMapping = localToServer;
+    this.serverToLocalMapping = serverToLocal;
+  }
 
-  const toLocal = async <S extends { id: string }>(
-    entities: S[]
-  ): Promise<S[]> => {
-    if (!initialized) {
+  public async toLocal<S extends { id: string }>(entities: S[]): Promise<S[]> {
+    if (!this.initialized) {
       throw new Error("Service is not initialized");
     }
 
-    if (!localToServerMapping || !serverToLocalMapping || dirty) {
-      await loadMappings();
-      dirty = false;
+    if (
+      !this.localToServerMapping ||
+      !this.serverToLocalMapping ||
+      this.dirty
+    ) {
+      await this.loadMappings();
+      this.dirty = false;
     }
 
-    if (!localToServerMapping || !serverToLocalMapping) {
+    if (!this.localToServerMapping || !this.serverToLocalMapping) {
       throw new Error("Id mappings are not loaded");
     }
 
@@ -76,40 +87,36 @@ const createLocalServerConverterService = (
         throw new Error("Entity id is missing");
       }
 
-      //   TODO: Fix ! assertion
-      if (serverToLocalMapping![entity.id]) {
-        //   TODO: Fix ! assertion
-        return { ...entity, id: serverToLocalMapping![entity.id] };
+      if (this.serverToLocalMapping![entity.id]) {
+        return { ...entity, id: this.serverToLocalMapping![entity.id] };
       }
 
-      if (!dirty) {
-        dirty = true;
+      if (!this.dirty) {
+        this.dirty = true;
       }
       const uuid = uuidv4();
-
-      //   TODO: Fix ! assertion
-      localToServerMapping![uuid] = entity.id;
+      this.localToServerMapping![uuid] = entity.id;
+      this.serverToLocalMapping![entity.id] = uuid;
 
       return { ...entity, id: uuid };
     });
 
-    if (dirty) await storageService.setIdMapping(localToServerMapping);
+    if (this.dirty)
+      await this.storageService.setIdMapping(this.localToServerMapping);
     return convertedEntities;
-  };
+  }
 
-  const toServer = async <L extends { id: string }>(
-    entities: L[]
-  ): Promise<L[]> => {
-    if (!initialized) {
+  public async toServer<L extends { id: string }>(entities: L[]): Promise<L[]> {
+    if (!this.initialized) {
       throw new Error("Service is not initialized");
     }
 
-    if (!localToServerMapping || dirty) {
-      await loadMappings();
-      dirty = false;
+    if (!this.localToServerMapping || this.dirty) {
+      await this.loadMappings();
+      this.dirty = false;
     }
 
-    if (!localToServerMapping) {
+    if (!this.localToServerMapping) {
       throw new Error("Id mappings are not loaded");
     }
 
@@ -118,46 +125,66 @@ const createLocalServerConverterService = (
         throw new Error("Entity id is missing");
       }
 
-      //   TODO: Fix ! assertion
-      if (!localToServerMapping![entity.id]) {
-        console.warn("Server id not found in local id: ", entity.id);
+      if (!this.localToServerMapping![entity.id]) {
+        console.warn("Server id not found for local id: ", entity.id);
       }
 
-      //   TODO: Fix ! assertion
-      return { ...entity, id: localToServerMapping![entity.id] };
+      return { ...entity, id: this.localToServerMapping![entity.id] };
     });
 
     return convertedEntities;
-  };
+  }
 
-  const addLocalServerMappingEntry = async (
+  public async addLocalServerMappingEntry(
     localId: string,
     serverId: string
-  ) => {
-    if (!initialized) {
+  ): Promise<void> {
+    if (!this.initialized) {
       throw new Error("Service is not initialized");
     }
 
-    if (!localToServerMapping || !serverToLocalMapping) {
-      await loadMappings();
+    if (!this.localToServerMapping || !this.serverToLocalMapping) {
+      await this.loadMappings();
     }
 
-    if (!localToServerMapping || !serverToLocalMapping) {
+    if (!this.localToServerMapping || !this.serverToLocalMapping) {
       throw new Error("Id mappings are not loaded");
     }
 
-    localToServerMapping[localId] = serverId;
-    serverToLocalMapping[serverId] = localId;
+    this.localToServerMapping[localId] = serverId;
+    this.serverToLocalMapping[serverId] = localId;
 
-    await storageService.setIdMapping(localToServerMapping);
-  };
+    await this.storageService.setIdMapping(this.localToServerMapping);
+  }
 
-  return {
-    toLocal,
-    toServer,
-    addLocalServerMappingEntry,
-    initialize,
-  };
-};
+  public async removeLocalServerMappingEntry(localId: string): Promise<void> {
+    if (!this.initialized) {
+      throw new Error("Service is not initialized");
+    }
 
-export default createLocalServerConverterService;
+    if (
+      !this.localToServerMapping ||
+      !this.serverToLocalMapping ||
+      this.dirty
+    ) {
+      await this.loadMappings();
+      this.dirty = false;
+    }
+
+    if (!this.localToServerMapping || !this.serverToLocalMapping) {
+      throw new Error("Id mappings are not loaded");
+    }
+
+    const serverId = this.localToServerMapping[localId];
+    if (serverId) {
+      delete this.localToServerMapping[localId];
+      delete this.serverToLocalMapping[serverId];
+      await this.storageService.setIdMapping(this.localToServerMapping);
+    } else {
+      console.warn("Server id not found for local id: ", localId);
+    }
+  }
+}
+
+export default LocalServerConverterService;
+export type { ILocalServerConverterService };

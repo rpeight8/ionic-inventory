@@ -1,19 +1,37 @@
+import { Actions } from "../../types";
 import DAG from "../../utils/DAG";
 import type { Node } from "../../utils/DAG";
 
-type Action = {
-  type: string;
-  params: Record<string, any>;
-  handler: (params: Record<string, any>) => Promise<void>;
-  status: StatusType;
-};
+type Params<T> = T extends (...args: infer P) => any ? P : never;
+
+type Action<T> =
+  | {
+      [K in keyof T]: T[K] extends (...args: any) => any
+        ? {
+            type: K;
+            params: Params<T[K]>;
+            status: StatusType;
+          }
+        : never;
+    }[keyof T]
+  | {
+      type: typeof ROOT;
+      params: {};
+      status: StatusType;
+    };
 
 type StatusType = {
   type: Status;
   text: string;
 };
 
-interface IActionScheduller {
+type Handlers<T> = {
+  [K in keyof T]: (...params: Params<T[K]>) => Promise<void>;
+};
+
+interface IActionScheduler<T> {
+  serialize(): string;
+  deserialize(json: string): void;
   run(): Promise<void>;
   reset(): void;
 }
@@ -27,26 +45,28 @@ enum Status {
   FAILED = "failed",
 }
 
-class ActionScheduller extends DAG<Action> implements IActionScheduller {
-  private static instance: ActionScheduller;
+class ActionScheduler<T> extends DAG<Action<T>> implements IActionScheduler<T> {
+  private static instance: ActionScheduler<any>;
+  private handlers: Handlers<T>;
 
-  private constructor() {
+  private constructor(handlers: Handlers<T>) {
     super();
+    this.handlers = handlers;
     this.reset();
   }
 
-  public static getInstance(): ActionScheduller {
-    if (!ActionScheduller.instance) {
-      ActionScheduller.instance = new ActionScheduller();
+  public static getInstance<T>(handlers: Handlers<T>): ActionScheduler<T> {
+    if (!ActionScheduler.instance) {
+      ActionScheduler.instance = new ActionScheduler<T>(handlers);
     }
-    return ActionScheduller.instance;
+    return ActionScheduler.instance;
   }
 
-  async executeNode(node: Node<Action>): Promise<void> {
+  async executeNode(node: Node<Action<T>>): Promise<void> {
     const incomingEdges = this.getIncomingEdges(node.id);
     const parentNodes = incomingEdges
       .map((edge) => this.findNode(edge.from))
-      .filter(Boolean) as Node<Action>[];
+      .filter(Boolean) as Node<Action<T>>[];
 
     const allParentsOk = parentNodes.every(
       (parent) => parent.data.status.type === Status.OK
@@ -99,11 +119,11 @@ class ActionScheduller extends DAG<Action> implements IActionScheduller {
     }
   }
 
-  async executeChildren(node: Node<Action>): Promise<void> {
+  async executeChildren(node: Node<Action<T>>): Promise<void> {
     const outgoingEdges = this.getOutgoingEdges(node.id);
     const childNodes = outgoingEdges
       .map((edge) => this.findNode(edge.to))
-      .filter(Boolean) as Node<Action>[];
+      .filter(Boolean) as Node<Action<T>>[];
     await Promise.all(
       childNodes.map(async (child) => {
         await this.executeNode(child);
@@ -111,11 +131,11 @@ class ActionScheduller extends DAG<Action> implements IActionScheduller {
     );
   }
 
-  async failAllChildren(node: Node<Action>): Promise<void> {
+  async failAllChildren(node: Node<Action<T>>): Promise<void> {
     const outgoingEdges = this.getOutgoingEdges(node.id);
     const childNodes = outgoingEdges
       .map((edge) => this.findNode(edge.to))
-      .filter(Boolean) as Node<Action>[];
+      .filter(Boolean) as Node<Action<T>>[];
     await Promise.all(
       childNodes.map(async (child) => {
         child.data.status = {
@@ -127,8 +147,16 @@ class ActionScheduller extends DAG<Action> implements IActionScheduller {
     );
   }
 
-  async performAction(node: Node<Action>): Promise<void> {
-    return await node.data.handler(node.data.params);
+  async performAction(node: Node<Action<T>>): Promise<void> {
+    if (node.data.type === ROOT) {
+      throw new Error("Root node cannot be executed");
+    }
+
+    const handler = this.handlers[node.data.type as keyof T];
+    if (!handler) {
+      throw new Error(`Handler for type "${String(node.data.type)}" not found`);
+    }
+    await handler(...(node.data.params as Params<T[typeof node.data.type]>));
   }
 
   async run(): Promise<void> {
@@ -140,7 +168,7 @@ class ActionScheduller extends DAG<Action> implements IActionScheduller {
     }
   }
 
-  public addNode(node: Node<Action>): void {
+  public override addNode(node: Node<Action<T>>): void {
     if (!node.data.status.type) {
       node.data.status = {
         type: Status.IDLE,
@@ -150,22 +178,62 @@ class ActionScheduller extends DAG<Action> implements IActionScheduller {
     super.addNode(node);
   }
 
+  public override removeNode(id: string): void {
+    if (id === ROOT) {
+      throw new Error("Root node cannot be removed");
+    }
+    super.removeNode(id);
+  }
+
+  public override removeNodeAndReattachChildren(id: string): void {
+    if (id === ROOT) {
+      throw new Error("Root node cannot be removed");
+    }
+    super.removeNodeAndReattachChildren(id);
+  }
+
   public reset(): void {
     this.nodes = [];
     this.edges = [];
-    const rootNode: Node<Action> = {
+    const rootNode: Node<Action<T>> = {
       id: ROOT,
       data: {
         type: ROOT,
         params: {},
-        handler: async () => {},
         status: { type: Status.OK, text: "Root node" },
       },
     };
     this.addNode(rootNode);
   }
+
+  public serialize(): string {
+    return JSON.stringify({
+      nodes: this.nodes.map((node) => ({
+        ...node,
+        data: {
+          status: node.data.status,
+          type: node.data.type,
+          params: node.data.params,
+        },
+      })),
+      edges: this.edges,
+    });
+  }
+
+  public deserialize(json: string): void {
+    const data = JSON.parse(json);
+    this.reset();
+
+    this.nodes = data.nodes.map((node: Node<Action<T>>) => ({
+      ...node,
+      data: {
+        ...node.data,
+      },
+    }));
+    this.edges = data.edges;
+  }
 }
 
-export default ActionScheduller;
+export default ActionScheduler;
 export { Status, ROOT };
-export type { StatusType, Node, Action };
+export type { StatusType, Node, Action, Handlers };
