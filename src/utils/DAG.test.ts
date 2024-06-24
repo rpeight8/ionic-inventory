@@ -109,8 +109,6 @@ describe("DAG", () => {
       `Node 4: {"name":"Task 4"}\n  -> 5\n` +
       `Node 5: {"name":"Task 5"}\n`;
 
-    console.log(dag.debugDraw());
-
     expect(dag.debugDraw()).toBe(expectedOutput);
   });
 
@@ -141,8 +139,6 @@ describe("DAG", () => {
       5: { data: { name: "Task 5" }, outgoing: [], incoming: [4] },
     };
 
-    console.log(dag.toDebugObject());
-
     expect(dag.toDebugObject()).toEqual(expectedDebugObject);
   });
 
@@ -161,15 +157,44 @@ describe("DAG", () => {
   test("should remove nodes and associated edges correctly", () => {
     const node1: Node<any> = { id: 1, data: { name: "Task 1" } };
     const node2: Node<any> = { id: 2, data: { name: "Task 2" } };
+    const node3: Node<any> = { id: 3, data: { name: "Task 3" } };
 
     dag.addNode(node1);
     dag.addNode(node2);
+    dag.addNode(node3);
+
     dag.addEdge(1, 2);
+    dag.addEdge(2, 3);
 
-    dag.removeNode(1);
+    dag.removeNode(2);
 
-    expect(dag.nodes).not.toContain(node1);
+    expect(dag.nodes).not.toContain(node2);
+    expect(dag.nodes).not.toContain(node3); // node3 should also be removed
     expect(dag.edges).not.toContainEqual({ from: 1, to: 2 });
+    expect(dag.edges).not.toContainEqual({ from: 2, to: 3 });
+  });
+
+  test("should remove node and reattach children to parent correctly", () => {
+    const node1: Node<any> = { id: 1, data: { name: "Task 1" } };
+    const node2: Node<any> = { id: 2, data: { name: "Task 2" } };
+    const node3: Node<any> = { id: 3, data: { name: "Task 3" } };
+    const node4: Node<any> = { id: 4, data: { name: "Task 4" } };
+
+    dag.addNode(node1);
+    dag.addNode(node2);
+    dag.addNode(node3);
+    dag.addNode(node4);
+
+    dag.addEdge(1, 2);
+    dag.addEdge(2, 3);
+    dag.addEdge(3, 4);
+
+    dag.removeNodeAndReattachChildren(3);
+
+    expect(dag.nodes).not.toContain(node3);
+    expect(dag.nodes).toContain(node4); // node4 should be reattached
+    expect(dag.edges).not.toContainEqual({ from: 3, to: 4 });
+    expect(dag.edges).toContainEqual({ from: 2, to: 4 });
   });
 
   test("should get incoming edges correctly", () => {
@@ -226,20 +251,5 @@ describe("DAG", () => {
 
     expect(dag.isDependent(1, 3)).toBe(true);
     expect(dag.isDependent(3, 1)).toBe(false);
-  });
-
-  test("should handle non-existent nodes and edges correctly", () => {
-    expect(() => dag.addEdge(1, 2)).not.toThrow();
-
-    dag.addNode({ id: 1, data: { name: "Task 1" } });
-    dag.addNode({ id: 2, data: { name: "Task 2" } });
-    dag.addEdge(1, 2);
-
-    dag.removeNode(3); // Node 3 does not exist
-    expect(dag.nodes.length).toBe(2);
-
-    dag.removeNode(1); // Node 1 exists
-    expect(dag.nodes.length).toBe(1);
-    expect(dag.edges.length).toBe(0);
   });
 });

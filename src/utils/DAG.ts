@@ -18,6 +18,7 @@ interface IDAG<T> {
   addEdge(from: ID, to: ID): void;
   findNode(id: ID): Node<T> | undefined;
   removeNode(id: ID): void;
+  removeNodeAndReattachChildren(id: ID): void;
   getIncomingEdges(id: ID): Edge[];
   getOutgoingEdges(id: ID): Edge[];
   topologicalSort(): Node<T>[];
@@ -36,19 +37,19 @@ export class DAG<T> implements IDAG<T> {
     this.edges = [];
   }
 
-  addNode(node: Node<T>): void {
+  public addNode(node: Node<T>): void {
     this.nodes.push(node);
   }
 
-  addEdge(from: ID, to: ID): void {
+  public addEdge(from: ID, to: ID): void {
     this.edges.push({ from, to });
   }
 
-  findNode(id: ID): Node<T> | undefined {
+  public findNode(id: ID): Node<T> | undefined {
     return this.nodes.find((node) => node.id === id);
   }
 
-  removeNode(id: ID): void {
+  public removeNode(id: ID): void {
     // Remove the node itself
     this.nodes = this.nodes.filter((node) => node.id !== id);
 
@@ -71,15 +72,39 @@ export class DAG<T> implements IDAG<T> {
     });
   }
 
-  getIncomingEdges(id: ID): Edge[] {
+  public removeNodeAndReattachChildren(id: ID): void {
+    const nodeToRemove = this.findNode(id);
+    if (!nodeToRemove) return;
+
+    // Find all incoming edges to the node being removed
+    const incomingEdges = this.getIncomingEdges(id);
+
+    // Find all outgoing edges from the node being removed
+    const outgoingEdges = this.getOutgoingEdges(id);
+
+    // Remove the node and all its edges
+    this.nodes = this.nodes.filter((node) => node.id !== id);
+    this.edges = this.edges.filter(
+      (edge) => edge.from !== id && edge.to !== id
+    );
+
+    // Reattach children to the parent(s) of the node being removed
+    incomingEdges.forEach((incomingEdge) => {
+      outgoingEdges.forEach((outgoingEdge) => {
+        this.addEdge(incomingEdge.from, outgoingEdge.to);
+      });
+    });
+  }
+
+  public getIncomingEdges(id: ID): Edge[] {
     return this.edges.filter((edge) => edge.to === id);
   }
 
-  getOutgoingEdges(id: ID): Edge[] {
+  public getOutgoingEdges(id: ID): Edge[] {
     return this.edges.filter((edge) => edge.from === id);
   }
 
-  topologicalSort(): Node<T>[] {
+  public topologicalSort(): Node<T>[] {
     const sorted: Node<T>[] = [];
     const nodes = [...this.nodes];
     const edges = [...this.edges];
@@ -111,7 +136,7 @@ export class DAG<T> implements IDAG<T> {
     return sorted;
   }
 
-  isDependent(from: ID, to: ID): boolean {
+  public isDependent(from: ID, to: ID): boolean {
     const edges = [...this.edges];
 
     const visit = (nodeId: ID): boolean => {
@@ -125,7 +150,7 @@ export class DAG<T> implements IDAG<T> {
     return visit(from);
   }
 
-  hasCycle(): boolean {
+  public hasCycle(): boolean {
     try {
       this.topologicalSort();
       return false;
@@ -134,7 +159,7 @@ export class DAG<T> implements IDAG<T> {
     }
   }
 
-  debugDraw(): string {
+  public debugDraw(): string {
     let output = "";
     this.nodes.forEach((node) => {
       output += `Node ${node.id}: ${JSON.stringify(node.data)}\n`;
@@ -146,7 +171,7 @@ export class DAG<T> implements IDAG<T> {
     return output;
   }
 
-  toDebugObject(): Record<ID, any> {
+  public toDebugObject(): Record<ID, any> {
     const debugObject: Record<ID, any> = {};
 
     this.nodes.forEach((node) => {
