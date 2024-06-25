@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { StorageServiceType } from "./StorageService";
 
-interface ILocalServerConverterService<S, L> {
+type LocalServerConverterServiceType<S, L> = {
   toLocal<S extends { id: string }>(entities: S[]): Promise<S[]>;
   toServer<L extends { id: string }>(entities: L[]): Promise<L[]>;
   addLocalServerMappingEntry: (
@@ -10,7 +10,7 @@ interface ILocalServerConverterService<S, L> {
   ) => Promise<void>;
   removeLocalServerMappingEntry: (localId: string) => Promise<void>;
   initialize: () => Promise<void>;
-}
+};
 
 type IdMapping = Record<string, string>;
 type LocalToServerMapping = IdMapping;
@@ -21,7 +21,7 @@ type IdMappingResult = {
 };
 
 class LocalServerConverterService<S, L>
-  implements ILocalServerConverterService<S, L>
+  implements LocalServerConverterServiceType<S, L>
 {
   private static instance: LocalServerConverterService<any, any>;
   private storageService: StorageServiceType;
@@ -50,6 +50,8 @@ class LocalServerConverterService<S, L>
 
     try {
       await this.storageService.initialize();
+      await this.loadMappings();
+      this.dirty = false;
       this.initialized = true;
     } catch (error) {
       console.error("Failed to initialize storage service", error);
@@ -187,4 +189,4 @@ class LocalServerConverterService<S, L>
 }
 
 export default LocalServerConverterService;
-export type { ILocalServerConverterService };
+export type { LocalServerConverterServiceType };

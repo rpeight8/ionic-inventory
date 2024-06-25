@@ -1,32 +1,56 @@
-import { NewTool, Tool } from "../../types";
+import { s } from "vitest/dist/reporters-5f784f42";
+import { ActionsHandlers, Tool } from "../../types";
 import type { IHttpClient } from "../HttpClientService/HttpClientService";
+import { LocalServerConverterServiceType } from "../LocalServerConverterService";
 
-import { ILocalServerConverterService } from "../LocalServerConverterService";
+// type ActionHandlersServiceType<
+//   AT extends string,
+//   ART extends {
+//     [key in AT]: any;
+//   }
+// > = {
+//   performAction: <T extends AT>(action: T) => ART[T];
+//   initialize: () => Promise<void>;
+// };
 
-interface IActionHandlersService {
-  createTool: (tool: Tool) => Promise<Tool>;
-  updateTool: (tool: Tool) => Promise<Tool>;
-  deleteTool: (tool: Tool) => Promise<void>;
+type ActionHandlersServiceType = {
   initialize: () => Promise<void>;
-}
+} & ActionsHandlers;
 
-class ActionHandlersService implements IActionHandlersService {
+class ActionHandlersService implements ActionHandlersServiceType {
+  [key: string]: any;
+
   private HttpClient: IHttpClient;
-  private LocalServerConverterService: ILocalServerConverterService<any, any>;
+  private LocalServerConverterService: LocalServerConverterServiceType<
+    any,
+    any
+  >;
+  private initialized = false;
 
   constructor({
     HTTPClientService,
     LocalServerConverterService,
   }: {
     HTTPClientService: IHttpClient;
-    LocalServerConverterService: ILocalServerConverterService<any, any>;
+    LocalServerConverterService: LocalServerConverterServiceType<any, any>;
   }) {
     this.HttpClient = HTTPClientService;
     this.LocalServerConverterService = LocalServerConverterService;
   }
 
   initialize: () => Promise<void> = async () => {
-    await this.LocalServerConverterService.initialize();
+    if (this.initialized) return;
+
+    try {
+      await Promise.all([
+        this.HttpClient.initialize(),
+        this.LocalServerConverterService.initialize(),
+      ]);
+      this.initialized = true;
+    } catch (error) {
+      console.error("Failed to initialize ActionHandlersService", error);
+      throw new Error("Failed to initialize ActionHandlersService");
+    }
   };
 
   public createTool: (tool: Tool) => Promise<Tool> = async (tool: Tool) => {
@@ -68,7 +92,9 @@ class ActionHandlersService implements IActionHandlersService {
     }
   };
 
-  public deleteTool: (tool: Tool) => Promise<void> = async (tool: Tool) => {
+  public deleteTool: (tool: { id: string }) => Promise<void> = async (tool: {
+    id: string;
+  }) => {
     try {
       const [, err] = await this.HttpClient.delete<void>(`/tools/${tool.id}`);
       if (err) {
@@ -82,7 +108,19 @@ class ActionHandlersService implements IActionHandlersService {
       throw new Error("Failed to delete tool");
     }
   };
+
+  public getTools: () => Promise<Tool[]> = async () => {
+    try {
+      const [tools, err] = await this.HttpClient.get<Tool[]>("/tools");
+      if (err || !tools) {
+        throw new Error("Failed to get tools");
+      }
+
+      return tools;
+    } catch (error) {
+      throw new Error("Failed to get tools");
+    }
+  };
 }
 
 export default ActionHandlersService;
-export type { IActionHandlersService };

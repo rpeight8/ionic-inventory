@@ -36,10 +36,22 @@ interface IHttpClient {
   ): Promise<[T] | [void, Error]>;
   setBaseUrl(url: string): void;
   getBaseUrl(): string | undefined;
+  initialize(): Promise<void>;
 }
 
 class HttpClientService implements IHttpClient {
   private baseUrl: string | undefined;
+  private initialized = false;
+
+  constructor(baseUrl?: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  public async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    this.initialized = true;
+  }
 
   public async get<T>(
     url: string,
@@ -213,7 +225,7 @@ class HttpClientService implements IHttpClient {
   }
 }
 
-export default new HttpClientService();
+export default HttpClientService;
 export { BasicError, NetworkConnectionError, UnhandledError };
 export type {
   IHttpClient,

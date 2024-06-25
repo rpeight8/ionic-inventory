@@ -28,19 +28,23 @@ type LocalToolbox = Local<Toolbox>;
 
 type Icon = (typeof icons)[keyof typeof icons];
 
-type ActionType = "createTool" | "updateTool" | "deleteTool";
+type createToolAction = (params: Tool) => Promise<Tool>;
+type updateToolAction = (params: Tool) => Promise<Tool>;
+type deleteToolAction = (params: { id: string }) => Promise<void>;
+type getToolsAction = () => Promise<Tool[]>;
+
+type ActionsHandlers = {
+  getTools: getToolsAction;
+  createTool: createToolAction;
+  updateTool: updateToolAction;
+  deleteTool: deleteToolAction;
+};
+
+type ActionType = keyof ActionsHandlers;
 
 // Define a type for the return values. Adjust this type according to your needs.
-type ActionReturnType = {
-  createTool: Promise<Tool>;
-  updateTool: Promise<Tool>;
-  deleteTool: Promise<void>;
-};
 
 // Define the Actions type with restrictions on return type
-type Actions = {
-  [key in ActionType]: () => ActionReturnType[key];
-};
 
 export type {
   Tool,
@@ -52,6 +56,5 @@ export type {
   LocalNewTool,
   LocalToolbox,
   ActionType,
-  ActionReturnType,
-  Actions,
+  ActionsHandlers,
 };

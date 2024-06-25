@@ -1,4 +1,4 @@
-type ID = string | number;
+type ID = string;
 
 interface Node<T> {
   id: ID;

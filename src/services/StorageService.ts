@@ -220,5 +220,5 @@ class StorageService implements StorageServiceType {
   }
 }
 
-export default StorageService.getInstance();
+export default StorageService;
 export type { StorageServiceType };
