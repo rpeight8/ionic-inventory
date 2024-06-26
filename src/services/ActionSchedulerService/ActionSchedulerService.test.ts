@@ -1,19 +1,19 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
 import ActionSchedulerService from "./ActionSchedulerService";
-import { Status, ROOT } from "./ActionSchedulerService";
+import { Status, RootNodeId } from "./ActionSchedulerService";
 import type { Node, Action, Handlers } from "./ActionSchedulerService";
 
 const createNode = (
   id: string,
   type: string,
-  params = {},
+  payload = {},
   statusType = Status.IDLE,
   statusText = "Initial status"
 ): Node<Action> => ({
   id,
   data: {
     type,
-    params,
+    payload,
     status: {
       type: statusType,
       text: statusText,
@@ -23,14 +23,14 @@ const createNode = (
 
 // Mock handlers
 const handlers: Handlers = {
-  async action(params: Record<string, any>) {
+  async action(payload: Record<string, any>) {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve("Action completed");
       }, 200);
     });
   },
-  async fail(params: Record<string, any>) {
+  async fail(payload: Record<string, any>) {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         reject(new Error("Action failed"));
@@ -40,7 +40,7 @@ const handlers: Handlers = {
 };
 
 describe("ActionSchedulerService", () => {
-  let scheduler: ActionSchedulerService;
+  let scheduler: ActionSchedulerService<any>;
 
   beforeEach(async () => {
     scheduler = ActionSchedulerService.getInstance(handlers);
@@ -53,9 +53,9 @@ describe("ActionSchedulerService", () => {
   });
 
   it("should initialize with a root node", () => {
-    const rootNode = scheduler.findNode(ROOT);
+    const rootNode = scheduler.findNode(RootNodeId);
     expect(rootNode).toBeDefined();
-    expect(rootNode?.data.type).toBe(ROOT);
+    expect(rootNode?.data.type).toBe(RootNodeId);
     expect(rootNode?.data.status.type).toBe(Status.OK);
   });
 
@@ -69,13 +69,13 @@ describe("ActionSchedulerService", () => {
   it("should perform actions for nodes without dependencies", async () => {
     const actionNode = createNode("1", "action");
     scheduler.addNode(actionNode);
-    scheduler.addEdge(ROOT, "1");
+    scheduler.addEdge(RootNodeId, "1");
 
     const performActionSpy = vi.spyOn(handlers, "action");
 
     await scheduler.run();
 
-    expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.params);
+    expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.payload);
     expect(actionNode.data.status.type).toBe(Status.OK);
   });
 
@@ -84,29 +84,14 @@ describe("ActionSchedulerService", () => {
     const childNode = createNode("2", "action");
     scheduler.addNode(parentNode);
     scheduler.addNode(childNode);
-    scheduler.addEdge(ROOT, "1");
+    scheduler.addEdge(RootNodeId, "1");
     scheduler.addEdge("1", "2");
 
-    scheduler.run();
+    const promise = scheduler.run();
 
     expect(childNode.data.status.type).toBe(Status.WAITING);
-  });
-
-  it("should fail children if a parent fails", async () => {
-    const parentNode = createNode("1", "fail");
-    const childNode1 = createNode("2", "action");
-    const childNode2 = createNode("3", "action");
-    scheduler.addNode(parentNode).catch(() => {});
-    scheduler.addNode(childNode1).catch(() => {});
-    scheduler.addNode(childNode2).catch(() => {});
-    scheduler.addEdge(ROOT, "1");
-    scheduler.addEdge("1", "2");
-    scheduler.addEdge("1", "3");
-
-    await scheduler.run();
-
-    expect(childNode1.data.status.type).toBe(Status.FAILED);
-    expect(childNode2.data.status.type).toBe(Status.FAILED);
+    await promise;
+    expect(childNode.data.status.type).toBe(Status.OK);
   });
 
   it("should propagate failures through multiple levels", async () => {
@@ -114,24 +99,28 @@ describe("ActionSchedulerService", () => {
     const childNode1 = createNode("2", "action");
     const childNode2 = createNode("3", "action");
     const grandChildNode = createNode("4", "action");
-    scheduler.addNode(parentNode).catch(() => {});
-    scheduler.addNode(childNode1).catch(() => {});
-    scheduler.addNode(childNode2).catch(() => {});
-    scheduler.addNode(grandChildNode);
-    scheduler.addEdge(ROOT, "1");
+    const promise1 = scheduler.addNode(parentNode);
+    const promise2 = scheduler.addNode(childNode1);
+    const promise3 = scheduler.addNode(childNode2);
+    const promise4 = scheduler.addNode(grandChildNode);
+    scheduler.addEdge(RootNodeId, "1");
     scheduler.addEdge("1", "2");
     scheduler.addEdge("1", "3");
     scheduler.addEdge("2", "4");
 
     await scheduler.run();
-
+    await expect(promise1[0]).rejects.toThrow("Action failed");
+    await expect(promise2[0]).rejects.toThrow("Action failed");
+    await expect(promise3[0]).rejects.toThrow("Action failed");
+    await expect(promise4[0]).rejects.toThrow("Action failed");
+    expect(parentNode.data.status.type).toBe(Status.FAILED);
     expect(childNode1.data.status.type).toBe(Status.FAILED);
     expect(childNode2.data.status.type).toBe(Status.FAILED);
     expect(grandChildNode.data.status.type).toBe(Status.FAILED);
   });
 
   it("should execute actions in the correct order", async () => {
-    const rootNode = scheduler.findNode(ROOT)!;
+    const rootNode = scheduler.findNode(RootNodeId)!;
     const actionNode1 = createNode("1", "action");
     const actionNode2 = createNode("2", "action");
     const actionNode3 = createNode("3", "action");
@@ -150,34 +139,34 @@ describe("ActionSchedulerService", () => {
 
     expect(performActionSpy).toHaveBeenNthCalledWith(
       1,
-      actionNode1.data.params
+      actionNode1.data.payload
     );
     expect(performActionSpy).toHaveBeenNthCalledWith(
       2,
-      actionNode2.data.params
+      actionNode2.data.payload
     );
     expect(performActionSpy).toHaveBeenNthCalledWith(
       3,
-      actionNode3.data.params
+      actionNode3.data.payload
     );
   });
 
-  // it("should handle failed actions correctly", async () => {
-  //   const actionNode = createNode("1", "fail");
-  //   scheduler.addNode(actionNode).catch(() => {});
-  //   scheduler.addEdge(ROOT, "1");
+  it("should handle failed actions correctly", async () => {
+    const actionNode = createNode("1", "fail");
+    scheduler.addNode(actionNode);
+    scheduler.addEdge(RootNodeId, "1");
 
-  //   const performActionSpy = vi.spyOn(handlers, "fail");
+    const performActionSpy = vi.spyOn(handlers, "fail");
 
-  //   await scheduler.run();
+    await scheduler.run();
 
-  //   expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.params);
-  //   expect(actionNode.data.status.type).toBe(Status.FAILED);
-  // });
+    expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.payload);
+    expect(actionNode.data.status.type).toBe(Status.FAILED);
+  });
 });
 
 describe("ActionSchedulerService Serialization", () => {
-  let scheduler: ActionSchedulerService;
+  let scheduler: ActionSchedulerService<any>;
 
   beforeEach(() => {
     scheduler = ActionSchedulerService.getInstance(handlers);
@@ -187,7 +176,7 @@ describe("ActionSchedulerService Serialization", () => {
   it("should serialize and deserialize correctly", () => {
     const actionNode = createNode("1", "action");
     scheduler.addNode(actionNode);
-    scheduler.addEdge(ROOT, "1");
+    scheduler.addEdge(RootNodeId, "1");
 
     const serialized = scheduler.serialize();
     scheduler.reset();
@@ -204,7 +193,7 @@ describe("ActionSchedulerService Serialization", () => {
     const actionNode2 = createNode("2", "action");
     scheduler.addNode(actionNode1);
     scheduler.addNode(actionNode2);
-    scheduler.addEdge(ROOT, "1");
+    scheduler.addEdge(RootNodeId, "1");
     scheduler.addEdge("1", "2");
 
     const serialized = scheduler.serialize();
@@ -212,14 +201,14 @@ describe("ActionSchedulerService Serialization", () => {
     scheduler.deserialize(serialized);
 
     const edges = scheduler.edges;
-    expect(edges).toContainEqual({ from: ROOT, to: "1" });
+    expect(edges).toContainEqual({ from: RootNodeId, to: "1" });
     expect(edges).toContainEqual({ from: "1", to: "2" });
   });
 
   it("should restore handlers correctly after deserialization", async () => {
     const actionNode = createNode("1", "action");
     scheduler.addNode(actionNode);
-    scheduler.addEdge(ROOT, "1");
+    scheduler.addEdge(RootNodeId, "1");
 
     const serialized = scheduler.serialize();
     scheduler.reset();
@@ -231,12 +220,12 @@ describe("ActionSchedulerService Serialization", () => {
     const performActionSpy = vi.spyOn(handlers, "action");
     await scheduler.run();
 
-    expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.params);
+    expect(performActionSpy).toHaveBeenCalledWith(actionNode.data.payload);
   });
 });
 
 describe("ActionSchedulerService addNode Promise Handling", () => {
-  let scheduler: ActionSchedulerService;
+  let scheduler: ActionSchedulerService<any>;
 
   beforeEach(async () => {
     scheduler = ActionSchedulerService.getInstance(handlers);
@@ -250,60 +239,60 @@ describe("ActionSchedulerService addNode Promise Handling", () => {
 
   it("should resolve the promise when action completes successfully", async () => {
     const actionNode = createNode("1", "action");
-    const promise = scheduler.addNode(actionNode);
-    scheduler.addEdge(ROOT, "1");
+    const [promise] = scheduler.addNode(actionNode);
+    scheduler.addEdge(RootNodeId, "1");
 
     await scheduler.run();
 
-    // expect(promise).resolves.toBe("Action completed");
+    await expect(promise).resolves.toBe("Action completed");
     expect(actionNode.data.status.type).toBe(Status.OK);
   });
 
   it("should reject the promise when action fails", async () => {
     const actionNode = createNode("1", "fail");
-    const promise = scheduler.addNode(actionNode).catch(() => {});
-    scheduler.addEdge(ROOT, "1");
+    const [promise] = scheduler.addNode(actionNode);
+    scheduler.addEdge(RootNodeId, "1");
 
     await scheduler.run();
 
-    expect(promise).rejects.toThrow("Action failed");
+    await expect(promise).rejects.toThrow("Action failed");
     expect(actionNode.data.status.type).toBe(Status.FAILED);
   });
 
-  // it("should resolve promises for dependent nodes in the correct order", async () => {
-  //   const actionNode1 = createNode("1", "action");
-  //   const actionNode2 = createNode("2", "action");
-  //   const promise1 = scheduler.addNode(actionNode1);
-  //   const promise2 = scheduler.addNode(actionNode2);
-  //   scheduler.addEdge(ROOT, "1");
-  //   scheduler.addEdge("1", "2");
+  it("should resolve promises for dependent nodes in the correct order", async () => {
+    const actionNode1 = createNode("1", "action");
+    const actionNode2 = createNode("2", "action");
+    const [promise1] = scheduler.addNode(actionNode1);
+    const [promise2] = scheduler.addNode(actionNode2);
+    scheduler.addEdge(RootNodeId, "1");
+    scheduler.addEdge("1", "2");
 
-  //   await scheduler.run();
-  //   expect(promise1).resolves.toBe("Action completed");
-  //   expect(promise2).resolves.toBe("Action completed");
-  //   expect(actionNode1.data.status.type).toBe(Status.OK);
-  //   expect(actionNode2.data.status.type).toBe(Status.OK);
-  // });
+    await scheduler.run();
+    await expect(promise1).resolves.toBe("Action completed");
+    await expect(promise2).resolves.toBe("Action completed");
+    expect(actionNode1.data.status.type).toBe(Status.OK);
+    expect(actionNode2.data.status.type).toBe(Status.OK);
+  });
 
-  // it("should handle promises for multiple nodes correctly", async () => {
-  //   const actionNode1 = createNode("1", "action");
-  //   const actionNode2 = createNode("2", "action");
-  //   const actionNode3 = createNode("3", "fail");
-  //   const promise1 = scheduler.addNode(actionNode1);
-  //   const promise2 = scheduler.addNode(actionNode2);
-  //   const promise3 = scheduler.addNode(actionNode3).catch(() => {});
-  //   scheduler.addEdge(ROOT, "1");
-  //   scheduler.addEdge("1", "2");
-  //   scheduler.addEdge("2", "3");
+  it("should handle promises for multiple nodes correctly", async () => {
+    const actionNode1 = createNode("1", "action");
+    const actionNode2 = createNode("2", "action");
+    const actionNode3 = createNode("3", "fail");
+    const [promise1] = scheduler.addNode(actionNode1);
+    const [promise2] = scheduler.addNode(actionNode2);
+    const [promise3] = scheduler.addNode(actionNode3).catch(() => {});
+    scheduler.addEdge(RootNodeId, "1");
+    scheduler.addEdge("1", "2");
+    scheduler.addEdge("2", "3");
 
-  //   await scheduler.run();
+    await scheduler.run();
 
-  //   expect(promise1).resolves.toBe("Action completed");
-  //   expect(promise2).resolves.toBe("Action completed");
-  //   expect(promise3).rejects.toThrow("Action failed");
+    await expect(promise1).resolves.toBe("Action completed");
+    await expect(promise2).resolves.toBe("Action completed");
+    await expect(promise3).rejects.toThrow("Action failed");
 
-  //   expect(actionNode1.data.status.type).toBe(Status.OK);
-  //   expect(actionNode2.data.status.type).toBe(Status.OK);
-  //   expect(actionNode3.data.status.type).toBe(Status.FAILED);
-  // });
+    expect(actionNode1.data.status.type).toBe(Status.OK);
+    expect(actionNode2.data.status.type).toBe(Status.OK);
+    expect(actionNode3.data.status.type).toBe(Status.FAILED);
+  });
 });

@@ -1,6 +1,6 @@
 import DAG from "../../utils/DAG";
 import type { Node, ID } from "../../utils/DAG";
-import type { ActionType, ActionsHandlers } from "../../types";
+import type { ReturnTypeWithError } from "../../types";
 import { v4 as uuidv4 } from "uuid";
 
 enum Status {
@@ -13,47 +13,93 @@ enum Status {
 
 type StatusType = {
   type: Status;
-  text: string;
+  text?: string;
 };
 
-type Action =
+type Action<
+  T extends string = string,
+  H extends (...args: any) => any = (...args: any) => any
+> = {
+  type: T;
+  handler: H;
+};
+
+type WithAction<A> =
   | {
-      type: any;
-      params: any;
+      type: A extends Action ? A["type"] : any;
+      payload: A extends Action ? Parameters<A["handler"]>[0] : any;
       status: StatusType;
     }
-  | { type: typeof ROOT; params: undefined; status: StatusType };
+  | { type: typeof ROOT; payload: undefined; status: StatusType };
 
-type Handlers = {
-  [key: string]: (...args: any) => Promise<any>;
+type ExtractHandlers<T extends Action> = {
+  [K in T as K extends { type: infer U }
+    ? U extends string | number | symbol
+      ? U
+      : never
+    : never]: K extends { handler: infer H } ? H : never;
 };
-type ActionSchedulerType = DAG<Action> & {
+
+type Handlers<A extends Action> = ExtractHandlers<A> & {
+  initialize?: () => Promise<void>;
+};
+
+type NodeActionStatusHandlers<A extends Action> = {
+  onOk?: (value: ReturnType<A["handler"]>) => void;
+  onFail?: (error: Error) => void;
+  onPending?: () => void;
+  onWait?: () => void;
+};
+
+type addNodeParams<A extends Action> = {
+  node: Node<WithAction<A>>;
+} & NodeActionStatusHandlers<A>;
+
+type ActionSchedulerType<ValidActions extends Action> = DAG<
+  WithAction<ValidActions>
+> & {
   serialize(): string;
   deserialize(json: string): void;
   initialize(): Promise<void>;
   run(): Promise<void>;
   reset(): void;
-  addNode<R>(node: Node<Action>): Promise<R>;
+  addNodeOverride<A extends ValidActions>(
+    params: addNodeParams<A>
+  ): ReturnTypeWithError<void>;
+  addNodeToNode<A extends ValidActions>(
+    params: {
+      node: Node<WithAction<A>>;
+      parentId: ID;
+    } & NodeActionStatusHandlers<A>
+  ): ReturnTypeWithError<void>;
+  removeNode(id: string): ReturnTypeWithError<void>;
+  removeNodeAndReattachChildren(id: string): ReturnTypeWithError<void>;
+  findByType(type: ValidActions["type"]): Node<WithAction<ValidActions>>[];
+  findByPredicate<A extends ValidActions>(
+    predicate: (node: Node<WithAction<A>>) => boolean
+  ): Node<WithAction<A>>[];
 };
 
 const ROOT = "ROOT";
 
-class ActionSchedulerService
-  extends DAG<Action>
-  implements ActionSchedulerType
+class ActionSchedulerService<ValidActions extends Action>
+  extends DAG<WithAction<ValidActions>>
+  implements ActionSchedulerType<ValidActions>
 {
-  private static instance: ActionSchedulerService;
-  private handlers: Handlers;
+  private static instance: ActionSchedulerService<any>;
+  private handlers: Handlers<ValidActions>;
   private initialized = false;
-  private promises: Map<
+  private listeners: Map<
     ID,
     {
-      resolve: (value: any) => void;
-      reject: (reason?: any) => void;
+      onOk?: (value: ReturnType<ValidActions["handler"]>) => void;
+      onFail?: (error: Error) => void;
+      onPending?: () => void;
+      onWait?: () => void;
     }
   > = new Map();
 
-  private constructor(handlers: Handlers) {
+  private constructor(handlers: Handlers<ValidActions>) {
     super();
     this.handlers = handlers;
     this.reset();
@@ -63,7 +109,7 @@ class ActionSchedulerService
     if (this.initialized) return;
 
     try {
-      if ("initialize" in this.handlers) {
+      if (this.handlers.initialize) {
         await this.handlers.initialize();
       }
       this.initialized = true;
@@ -73,18 +119,25 @@ class ActionSchedulerService
     }
   }
 
-  public static getInstance(handlers: Handlers): ActionSchedulerService {
+  public static getInstance<ValidActions extends Action>(
+    handlers: Handlers<ValidActions>
+  ): ActionSchedulerService<ValidActions> {
     if (!ActionSchedulerService.instance) {
-      ActionSchedulerService.instance = new ActionSchedulerService(handlers);
+      ActionSchedulerService.instance =
+        new ActionSchedulerService<ValidActions>(handlers);
     }
-    return ActionSchedulerService.instance as ActionSchedulerService;
+    return ActionSchedulerService.instance;
   }
 
-  private async executeNode(node: Node<Action>): Promise<void> {
-    const incomingEdges = this.getIncomingEdges(node.id);
-    const parentNodes = incomingEdges
+  private async executeNode(
+    node: Node<WithAction<ValidActions>>
+  ): Promise<void> {
+    const parentNodes = this.getIncomingEdges(node.id)
       .map((edge) => this.findNode(edge.from))
-      .filter((node): node is Node<Action> => node !== undefined);
+      .filter(
+        (parent): parent is Node<WithAction<ValidActions>> =>
+          parent !== undefined
+      );
 
     const allParentsOk = parentNodes.every(
       (parent) => parent.data.status.type === Status.OK
@@ -96,19 +149,16 @@ class ActionSchedulerService
       (parent) => parent.data.status.type === Status.PENDING
     );
 
-    if (node.id !== ROOT && anyParentPending) {
-      return;
-    }
-
-    if (node.id !== ROOT && anyParentFailed) {
-      return;
+    if (node.id !== ROOT) {
+      if (anyParentPending) return;
+      if (anyParentFailed) return;
     }
 
     try {
       if (node.data.type === ROOT) {
         await this.executeChildren(node);
       } else {
-        this.pendingNode(node, "Action is being executed");
+        this.pendNode(node, "Action is being executed");
         this.waitAllChildren(node, "Waiting for parent tasks to complete");
         const res = await this.performAction(node);
         this.okNode(node, res);
@@ -120,11 +170,15 @@ class ActionSchedulerService
     }
   }
 
-  private async executeChildren(node: Node<Action>): Promise<void> {
+  private async executeChildren(
+    node: Node<WithAction<ValidActions>>
+  ): Promise<void> {
     const outgoingEdges = this.getOutgoingEdges(node.id);
     const childNodes = outgoingEdges
       .map((edge) => this.findNode(edge.to))
-      .filter((node): node is Node<Action> => node !== undefined);
+      .filter(
+        (node): node is Node<WithAction<ValidActions>> => node !== undefined
+      );
     await Promise.all(
       childNodes.map(async (child) => {
         await this.executeNode(child);
@@ -132,11 +186,16 @@ class ActionSchedulerService
     );
   }
 
-  private failAllChildren(node: Node<Action>, error: Error): void {
+  private failAllChildren(
+    node: Node<WithAction<ValidActions>>,
+    error: Error
+  ): void {
     const outgoingEdges = this.getOutgoingEdges(node.id);
     const childNodes = outgoingEdges
       .map((edge) => this.findNode(edge.to))
-      .filter((node): node is Node<Action> => node !== undefined);
+      .filter(
+        (node): node is Node<WithAction<ValidActions>> => node !== undefined
+      );
 
     childNodes.map(async (child) => {
       this.failNode(child, error);
@@ -144,11 +203,16 @@ class ActionSchedulerService
     });
   }
 
-  private waitAllChildren(node: Node<Action>, text: string): void {
+  private waitAllChildren(
+    node: Node<WithAction<ValidActions>>,
+    text: string
+  ): void {
     const outgoingEdges = this.getOutgoingEdges(node.id);
     const childNodes = outgoingEdges
       .map((edge) => this.findNode(edge.to))
-      .filter((node): node is Node<Action> => node !== undefined);
+      .filter(
+        (node): node is Node<WithAction<ValidActions>> => node !== undefined
+      );
 
     childNodes.map(async (child) => {
       this.waitNode(child, text);
@@ -156,7 +220,9 @@ class ActionSchedulerService
     });
   }
 
-  private async performAction(node: Node<Action>): Promise<void> {
+  private async performAction(
+    node: Node<WithAction<ValidActions>>
+  ): Promise<void> {
     if (node.data.type === ROOT) {
       throw new Error("Root node cannot be executed");
     }
@@ -165,7 +231,9 @@ class ActionSchedulerService
     }
 
     if (node.data.type in this.handlers) {
-      const handler = this.handlers[node.data.type];
+      // TODO: Fix as assertion
+      const handler =
+        this.handlers[node.data.type as keyof Handlers<ValidActions>];
 
       if (!handler) {
         throw new Error(
@@ -173,7 +241,7 @@ class ActionSchedulerService
         );
       }
       try {
-        const res = await handler(node.data.params);
+        const res = await handler(node.data.payload);
         return res;
       } catch (error) {
         throw error;
@@ -181,50 +249,83 @@ class ActionSchedulerService
     }
   }
 
-  private rejectPromise(id: ID, error: Error): void {
-    if (this.promises.has(id)) {
-      const { reject } = this.promises.get(id)!;
-      reject(error);
-      this.promises.delete(id);
+  private fireListeners(
+    node: Node<WithAction<ValidActions>>,
+    payload: ReturnType<ValidActions["handler"]>
+  ): void {
+    const listener = this.listeners.get(node.id);
+    if (!listener) return;
+
+    switch (node.data.status.type) {
+      case Status.OK:
+        listener.onOk?.(payload);
+        break;
+      case Status.FAILED:
+        listener.onFail?.(new Error(node.data.status.text));
+        break;
+      case Status.PENDING:
+        listener.onPending?.();
+        break;
+      case Status.WAITING:
+        listener.onWait?.();
+        break;
     }
+
+    this.listeners.delete(node.id);
   }
 
-  private resolvePromise(id: ID, value: any): void {
-    if (this.promises.has(id)) {
-      const { resolve } = this.promises.get(id)!;
-      resolve(value);
-      this.promises.delete(id);
+  private updateNodeStatus(
+    node: Node<WithAction<ValidActions>>,
+    status: Status,
+    text?: string,
+    payload?: any
+  ): void {
+    node.data.status = { type: status, text };
+    this.fireListeners(node, payload);
+  }
+
+  private failNode(
+    node: Node<WithAction<ValidActions>>,
+    error: Error,
+    payload?: any
+  ): void {
+    if (node.data.type === ROOT) {
+      throw new Error("Root node cannot fail");
     }
+
+    this.updateNodeStatus(node, Status.FAILED, error.message, payload);
   }
 
-  private failNode(node: Node<Action>, error: Error): void {
-    node.data.status = {
-      type: Status.FAILED,
-      text: error.message,
-    };
-    this.rejectPromise(node.id, error);
+  private waitNode(
+    node: Node<WithAction<ValidActions>>,
+    text?: string,
+    payload?: any
+  ): void {
+    this.updateNodeStatus(node, Status.WAITING, text, payload);
   }
 
-  private waitNode(node: Node<Action>, text: string): void {
-    node.data.status = {
-      type: Status.WAITING,
-      text,
-    };
+  private okNode(
+    node: Node<WithAction<ValidActions>>,
+    text?: string,
+    payload?: any
+  ): void {
+    this.updateNodeStatus(node, Status.OK, text, payload);
   }
 
-  private okNode(node: Node<Action>, value: any): void {
-    node.data.status = {
-      type: Status.OK,
-      text: "Action performed successfully",
-    };
-    this.resolvePromise(node.id, value);
+  private pendNode(
+    node: Node<WithAction<ValidActions>>,
+    text?: string,
+    payload?: any
+  ): void {
+    this.updateNodeStatus(node, Status.PENDING, text, payload);
   }
 
-  private pendingNode(node: Node<Action>, text: string): void {
-    node.data.status = {
-      type: Status.PENDING,
-      text,
-    };
+  private idleNode(
+    node: Node<WithAction<ValidActions>>,
+    text?: string,
+    payload?: any
+  ): void {
+    this.updateNodeStatus(node, Status.IDLE, payload);
   }
 
   public async run(): Promise<void> {
@@ -233,63 +334,132 @@ class ActionSchedulerService
     }
 
     const rootNode = this.findNode(ROOT);
-    if (rootNode) {
-      try {
-        await this.executeNode(rootNode);
-      } catch (error) {
-        console.error("Failed to run scheduler", error);
+    if (!rootNode) {
+      throw new Error("Service is not initialized");
+    }
+
+    try {
+      await this.executeNode(rootNode);
+    } catch (error) {
+      console.error("Failed to run scheduler", error);
+    }
+  }
+
+  // TODO: Override addNode
+  public addNodeOverride<A extends ValidActions>({
+    node,
+    onOk,
+    onFail,
+    onPending,
+    onWait,
+  }: addNodeParams<A>): ReturnTypeWithError<void> {
+    try {
+      if (!node.data.status.type) {
+        node.data.status = {
+          type: Status.IDLE,
+        };
       }
-    } else {
-      throw new Error("Root node not found");
+
+      if (node.data.type === ROOT) {
+        return new Error("Root node cannot be added");
+      }
+
+      if (onOk || onFail || onPending || onWait) {
+        this.listeners.set(node.id, { onOk, onFail, onPending, onWait });
+      }
+
+      super.addNode(node);
+    } catch (error) {
+      console.log("Failed to add node", error);
+      return new Error(`Failed to add node with id ${node.id}`);
     }
   }
 
-  public override addNode<R>(node: Node<Action>): Promise<R> {
-    if (!node.data.status.type) {
-      node.data.status = {
-        type: Status.IDLE,
-        text: "Node is idle",
-      };
-    }
-    // TODO: Remove this check once all nodes have an id asssigned by the caller
-    if (!node.id) {
-      node.id = uuidv4();
-    }
+  public addNodeToNode<A extends ValidActions>({
+    node,
+    parentId,
+    ...rest
+  }: {
+    node: Node<WithAction<A>>;
+    parentId: ID;
+  } & NodeActionStatusHandlers<A>): ReturnTypeWithError<void> {
+    try {
+      const parent = this.findNode(parentId);
+      if (!parent) {
+        return new Error(`Parent node with id ${parentId} not found`);
+      }
 
-    const promise = new Promise<R>((resolve, reject) => {
-      this.promises.set(node.id, { resolve, reject });
-    });
+      const result = this.addNodeOverride<A>({
+        node,
+        ...rest,
+      });
 
-    super.addNode(node);
-    return promise;
+      this.addEdge(parentId, node.id);
+      this.idleNode(node);
+    } catch (error) {
+      console.log("Failed to add node", error);
+      return new Error(`Failed to add node with id ${node.id}`);
+    }
   }
 
-  public override removeNode(id: string): void {
+  public override removeNode(id: string): ReturnTypeWithError<void> {
+    try {
+      if (id === ROOT) {
+        return new Error("Root node cannot be removed");
+      }
+      super.removeNode(id);
+    } catch (error) {
+      if (error instanceof Error) {
+        return error;
+      }
+      return new Error("Unexpected error: failed to remove node");
+    }
+  }
+
+  public override removeNodeAndReattachChildren(
+    id: string
+  ): ReturnTypeWithError<void> {
+    try {
+      if (id === ROOT) {
+        return new Error("Root node cannot be removed");
+      }
+      super.removeNodeAndReattachChildren(id);
+    } catch (error) {
+      if (error instanceof Error) {
+        return error;
+      }
+      return new Error("Unexpected error: failed to remove node");
+    }
     if (id === ROOT) {
       throw new Error("Root node cannot be removed");
     }
-    super.removeNode(id);
   }
 
-  public override removeNodeAndReattachChildren(id: string): void {
-    if (id === ROOT) {
-      throw new Error("Root node cannot be removed");
-    }
-    super.removeNodeAndReattachChildren(id);
+  public findByType(
+    type: ValidActions["type"]
+  ): Node<WithAction<ValidActions>>[] {
+    return this.nodes.filter((node) => node.data.type === type);
+  }
+
+  public findByPredicate<A extends ValidActions>(
+    predicate: (node: Node<WithAction<A>>) => boolean
+  ): Node<WithAction<A>>[] {
+    return this.nodes.filter(predicate);
   }
 
   public reset(): void {
     this.nodes = [];
     this.edges = [];
-    const rootNode: Node<Action> = {
+    const rootNode: Node<WithAction<ValidActions>> = {
       id: ROOT,
       data: {
         type: ROOT,
-        params: undefined,
-        status: { type: Status.OK, text: "Root node" },
+        payload: undefined,
+        status: { type: Status.OK },
       },
     };
-    this.promises.clear();
+    this.listeners.clear();
+    this.listeners = new Map();
     this.addNode(rootNode);
   }
 
@@ -300,7 +470,7 @@ class ActionSchedulerService
         data: {
           status: node.data.status,
           type: node.data.type,
-          params: node.data.params,
+          payload: node.data.payload,
         },
       })),
       edges: this.edges,
@@ -311,7 +481,7 @@ class ActionSchedulerService
     const data = JSON.parse(json);
     this.reset();
 
-    this.nodes = data.nodes.map((node: Node<Action>) => ({
+    this.nodes = data.nodes.map((node: Node<WithAction<ValidActions>>) => ({
       ...node,
       data: {
         ...node.data,
@@ -322,5 +492,5 @@ class ActionSchedulerService
 }
 
 export default ActionSchedulerService;
-export { Status, ROOT };
+export { Status, ROOT as RootNodeId };
 export type { StatusType, Node, Action, Handlers, ActionSchedulerType };

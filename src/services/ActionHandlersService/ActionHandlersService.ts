@@ -1,21 +1,18 @@
 import { s } from "vitest/dist/reporters-5f784f42";
-import { ActionsHandlers, Tool } from "../../types";
+import {
+  ActionType,
+  Actions,
+  ActionsLoaders,
+  AsyncReturnTypeWithError,
+  Tool,
+  ToolId,
+} from "../../types";
 import type { IHttpClient } from "../HttpClientService/HttpClientService";
 import { LocalServerConverterServiceType } from "../LocalServerConverterService";
 
-// type ActionHandlersServiceType<
-//   AT extends string,
-//   ART extends {
-//     [key in AT]: any;
-//   }
-// > = {
-//   performAction: <T extends AT>(action: T) => ART[T];
-//   initialize: () => Promise<void>;
-// };
-
 type ActionHandlersServiceType = {
   initialize: () => Promise<void>;
-} & ActionsHandlers;
+};
 
 class ActionHandlersService implements ActionHandlersServiceType {
   [key: string]: any;
@@ -53,74 +50,75 @@ class ActionHandlersService implements ActionHandlersServiceType {
     }
   };
 
-  public createTool: (tool: Tool) => Promise<Tool> = async (tool: Tool) => {
-    try {
-      const [createdTool, err] = await this.HttpClient.post<Tool>(
-        "/tools",
-        tool
-      );
+  public createTool: (tool: Tool) => AsyncReturnTypeWithError<Promise<Tool>> =
+    async (tool: Tool) => {
+      try {
+        const result = await this.HttpClient.post<Tool>("/tools", tool);
 
-      if (err || !createdTool) {
+        if (result.length === 2) {
+          return [, result[1]];
+        }
+        const createdTool = result[0];
+
+        this.LocalServerConverterService.addLocalServerMappingEntry(
+          createdTool.id,
+          tool.id
+        );
+
+        return [createdTool];
+      } catch (error) {
         throw new Error("Failed to create tool");
       }
+    };
 
-      this.LocalServerConverterService.addLocalServerMappingEntry(
-        createdTool.id,
-        tool.id
-      );
+  public updateTool: (tool: Tool) => AsyncReturnTypeWithError<Promise<Tool>> =
+    async (tool: Tool) => {
+      try {
+        const result = await this.HttpClient.put<Tool>(
+          `/tools/${tool.id}`,
+          tool
+        );
 
-      return createdTool;
-    } catch (error) {
-      throw new Error("Failed to create tool");
-    }
-  };
+        if (result.length === 2) {
+          return [, result[1]];
+        }
 
-  public updateTool: (tool: Tool) => Promise<Tool> = async (tool: Tool) => {
-    try {
-      const [updatedTool, err] = await this.HttpClient.put<Tool>(
-        `/tools/${tool.id}`,
-        tool
-      );
-
-      if (err || !updatedTool) {
+        return [result[0]];
+      } catch (error) {
         throw new Error("Failed to update tool");
       }
+    };
 
-      return updatedTool;
-    } catch (error) {
-      throw new Error("Failed to update tool");
-    }
-  };
-
-  public deleteTool: (tool: { id: string }) => Promise<void> = async (tool: {
-    id: string;
-  }) => {
+  public deleteTool: (params: {
+    id: ToolId;
+  }) => AsyncReturnTypeWithError<Promise<void>> = async ({ id }) => {
     try {
-      const [, err] = await this.HttpClient.delete<void>(`/tools/${tool.id}`);
-      if (err) {
-        throw new Error("Failed to delete tool");
+      const result = await this.HttpClient.delete<void>(`/tools/${id}`);
+
+      if (result.length === 2) {
+        return result[1];
       }
 
-      await this.LocalServerConverterService.removeLocalServerMappingEntry(
-        tool.id
-      );
+      return;
     } catch (error) {
-      throw new Error("Failed to delete tool");
+      return new Error("Failed to delete tool");
     }
   };
 
-  public getTools: () => Promise<Tool[]> = async () => {
-    try {
-      const [tools, err] = await this.HttpClient.get<Tool[]>("/tools");
-      if (err || !tools) {
+  public getTools: () => AsyncReturnTypeWithError<Promise<Tool[]>> =
+    async () => {
+      try {
+        const result = await this.HttpClient.get<Tool[]>("/tools");
+
+        if (result.length === 2) {
+          return [, result[1]];
+        }
+
+        return [result[0]];
+      } catch (error) {
         throw new Error("Failed to get tools");
       }
-
-      return tools;
-    } catch (error) {
-      throw new Error("Failed to get tools");
-    }
-  };
+    };
 }
 
 export default ActionHandlersService;

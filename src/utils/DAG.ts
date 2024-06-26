@@ -19,6 +19,7 @@ interface IDAG<T> {
   findNode(id: ID): Node<T> | undefined;
   removeNode(id: ID): void;
   removeNodeAndReattachChildren(id: ID): void;
+  removeEdge(from: ID, to: ID): void;
   getIncomingEdges(id: ID): Edge[];
   getOutgoingEdges(id: ID): Edge[];
   topologicalSort(): Node<T>[];
@@ -70,6 +71,12 @@ export class DAG<T> implements IDAG<T> {
         this.removeNode(childNodeId);
       }
     });
+  }
+
+  public removeEdge(from: ID, to: ID): void {
+    this.edges = this.edges.filter(
+      (edge) => edge.from !== from || edge.to !== to
+    );
   }
 
   public removeNodeAndReattachChildren(id: ID): void {
