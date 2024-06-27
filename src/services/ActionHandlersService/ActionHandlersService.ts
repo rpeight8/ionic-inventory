@@ -4,18 +4,30 @@ import {
   Tool,
   ToolId,
 } from "../../types";
-import type { IHttpClient } from "../HttpClientService/HttpClientService";
+import type {
+  HttpClientError,
+  HttpClientType,
+} from "../HttpClientService/HttpClientService";
 import { LocalServerConverterServiceType } from "../LocalServerConverterService";
 
 // TODO: Make accept a generic type for action loaders
 type ActionHandlersServiceType = {
   initialize: () => Promise<void>;
-} & ActionsLoaders;
+} & ActionsLoaders<HttpClientError>;
 
+const isTool = (tool: unknown): tool is Tool => {
+  return (
+    typeof tool === "object" &&
+    tool !== null &&
+    "id" in tool &&
+    "name" in tool &&
+    "quantity" in tool
+  );
+};
 class ActionHandlersService implements ActionHandlersServiceType {
   [key: string]: any;
 
-  private HttpClient: IHttpClient;
+  private HttpClient: HttpClientType;
   private LocalServerConverterService: LocalServerConverterServiceType<
     any,
     any
@@ -26,7 +38,7 @@ class ActionHandlersService implements ActionHandlersServiceType {
     HTTPClientService,
     LocalServerConverterService,
   }: {
-    HTTPClientService: IHttpClient;
+    HTTPClientService: HttpClientType;
     LocalServerConverterService: LocalServerConverterServiceType<any, any>;
   }) {
     this.HttpClient = HTTPClientService;
@@ -48,50 +60,64 @@ class ActionHandlersService implements ActionHandlersServiceType {
     }
   };
 
-  public createTool: (tool: Tool) => AsyncReturnTypeWithError<Promise<Tool>> =
-    async (tool: Tool) => {
-      try {
-        const result = await this.HttpClient.post<Tool>("/tools", tool);
+  public createTool: (
+    tool: Tool
+  ) => AsyncReturnTypeWithError<Promise<Tool>, HttpClientError> = async (
+    tool: Tool
+  ) => {
+    try {
+      const result = await this.HttpClient.post("/tools", tool);
 
-        if (result.length === 2) {
-          return [, result[1]];
-        }
-        const createdTool = result[0];
-
-        this.LocalServerConverterService.addLocalServerMappingEntry(
-          createdTool.id,
-          tool.id
-        );
-
-        return [createdTool];
-      } catch (error) {
-        throw new Error("Failed to create tool");
+      if (result.length === 2) {
+        return [, result[1]];
       }
-    };
+      const createdTool = result[0];
 
-  public updateTool: (tool: Tool) => AsyncReturnTypeWithError<Promise<Tool>> =
-    async (tool: Tool) => {
-      try {
-        const result = await this.HttpClient.put<Tool>(
-          `/tools/${tool.id}`,
-          tool
-        );
-
-        if (result.length === 2) {
-          return [, result[1]];
-        }
-
-        return [result[0]];
-      } catch (error) {
-        throw new Error("Failed to update tool");
+      if (!isTool(createdTool)) {
+        return [, new Error("Not a tool object")];
       }
-    };
+
+      this.LocalServerConverterService.addLocalServerMappingEntry(
+        createdTool.id,
+        tool.id
+      );
+
+      return [createdTool];
+    } catch (error) {
+      return [, new Error("Failed to create tool")];
+    }
+  };
+
+  public updateTool: (
+    tool: Tool
+  ) => AsyncReturnTypeWithError<Promise<Tool>, HttpClientError> = async (
+    tool: Tool
+  ) => {
+    try {
+      const result = await this.HttpClient.put(`/tools/${tool.id}`, tool);
+
+      if (result.length === 2) {
+        return [, result[1]];
+      }
+
+      const updatedTool = result[0];
+      if (!isTool(updatedTool)) {
+        return [, new Error("Not a tool object")];
+      }
+
+      return [updatedTool];
+    } catch (error) {
+      return [, new Error("Failed to update tool")];
+    }
+  };
 
   public deleteTool: (params: {
     id: ToolId;
-  }) => AsyncReturnTypeWithError<Promise<void>> = async ({ id }) => {
+  }) => AsyncReturnTypeWithError<Promise<void>, HttpClientError> = async ({
+    id,
+  }) => {
     try {
-      const result = await this.HttpClient.delete<void>(`/tools/${id}`);
+      const result = await this.HttpClient.delete(`/tools/${id}`);
 
       if (result.length === 2) {
         return result[1];
@@ -103,20 +129,28 @@ class ActionHandlersService implements ActionHandlersServiceType {
     }
   };
 
-  public getTools: () => AsyncReturnTypeWithError<Promise<Tool[]>> =
-    async () => {
-      try {
-        const result = await this.HttpClient.get<Tool[]>("/tools");
+  public getTools: () => AsyncReturnTypeWithError<
+    Promise<Tool[]>,
+    HttpClientError
+  > = async () => {
+    try {
+      const result = await this.HttpClient.get("/tools");
 
-        if (result.length === 2) {
-          return [, result[1]];
-        }
-
-        return [result[0]];
-      } catch (error) {
-        throw new Error("Failed to get tools");
+      if (result.length === 2) {
+        return [, result[1]];
       }
-    };
+
+      const tools = result[0];
+
+      if (!Array.isArray(tools) || !tools.every(isTool)) {
+        return [, new Error("Not an array of tools")];
+      }
+
+      return [tools];
+    } catch (error) {
+      return [, new Error("Failed to get tools")];
+    }
+  };
 }
 
 export default ActionHandlersService;

@@ -1,45 +1,52 @@
-import { CapacitorHttp } from "@capacitor/core";
+import { CapacitorHttp, HttpResponse } from "@capacitor/core";
 import BasicError from "./errors/BasicError";
 import NetworkConnectionError from "./errors/NetworkConnectionError";
 import UnhandledError from "./errors/UnhandledError";
 import type { BasicError as BasicErrorType } from "./errors/BasicError";
 import type { NetworkConnectionError as NetworkConnectionErrorType } from "./errors/NetworkConnectionError";
 import type { UnhandledError as UnhandledErrorType } from "./errors/UnhandledError";
+import { AsyncReturnTypeWithError } from "../../types";
 
 type HttpClientConfig = {
   useBaseUrl?: boolean;
   headers?: { [key: string]: string };
 };
 
-type Error = BasicErrorType | NetworkConnectionErrorType | UnhandledErrorType;
+type HttpClientError =
+  | BasicErrorType
+  | NetworkConnectionErrorType
+  | UnhandledErrorType;
 
-interface IHttpClient {
-  get<T>(
+type HttpClientType = {
+  get(
     url: string,
     params?: Record<string, any>,
     config?: HttpClientConfig
-  ): Promise<[T] | [void, Error]>;
-  post<T>(
+  ): Promise<[unknown] | [void, HttpClientError]>;
+  post(
     url: string,
     body: any,
     config?: HttpClientConfig
-  ): Promise<[T] | [void, Error]>;
-  ping<T>(url: string, config?: HttpClientConfig): Promise<[T] | [void, Error]>;
-  put<T>(
+  ): Promise<[unknown] | [void, HttpClientError]>;
+  ping(
+    url: string,
+    config?: HttpClientConfig
+  ): Promise<[unknown] | [void, HttpClientError]>;
+  put(
     url: string,
     body: any,
     config?: HttpClientConfig
-  ): Promise<[T] | [void, Error]>;
-  delete<T>(
+  ): Promise<[unknown] | [void, HttpClientError]>;
+  delete(
     url: string,
     config?: HttpClientConfig
-  ): Promise<[T] | [void, Error]>;
+  ): Promise<[unknown] | [void, HttpClientError]>;
   setBaseUrl(url: string): void;
   getBaseUrl(): string | undefined;
   initialize(): Promise<void>;
-}
+};
 
-class HttpClientService implements IHttpClient {
+class HttpClientService implements HttpClientType {
   private baseUrl: string | undefined;
   private initialized = false;
 
@@ -53,11 +60,11 @@ class HttpClientService implements IHttpClient {
     this.initialized = true;
   }
 
-  public async get<T>(
+  public async get(
     url: string,
     params: Record<string, any> = {},
     config: HttpClientConfig = {}
-  ): Promise<[T] | [void, Error]> {
+  ): Promise<[unknown] | [void, HttpClientError]> {
     try {
       const fullUrl = this.buildUrl(
         url,
@@ -72,17 +79,23 @@ class HttpClientService implements IHttpClient {
         throw new NetworkConnectionError(error.message);
       });
 
-      return this.handleResponse(response);
+      const handledResponse = this.handleResponse(response);
+
+      if (handledResponse.length === 2) {
+        return [, handledResponse[1]];
+      }
+
+      return handledResponse;
     } catch (error) {
       return [, this.handleError(error)];
     }
   }
 
-  public async post<T>(
+  public async post(
     url: string,
     body: any,
     config: HttpClientConfig = {}
-  ): Promise<[T] | [void, Error]> {
+  ): Promise<[unknown] | [void, HttpClientError]> {
     try {
       config.headers = {
         "Content-Type": "application/json",
@@ -107,11 +120,11 @@ class HttpClientService implements IHttpClient {
     }
   }
 
-  public async put<T>(
+  public async put(
     url: string,
     body: any,
     config: HttpClientConfig = {}
-  ): Promise<[T] | [void, Error]> {
+  ): Promise<[unknown] | [void, HttpClientError]> {
     try {
       const fullUrl = this.buildUrl(
         url,
@@ -132,10 +145,10 @@ class HttpClientService implements IHttpClient {
     }
   }
 
-  public async delete<T>(
+  public async delete(
     url: string,
     config: HttpClientConfig = {}
-  ): Promise<[T] | [void, Error]> {
+  ): Promise<[unknown] | [void, HttpClientError]> {
     try {
       const fullUrl = this.buildUrl(
         url,
@@ -155,10 +168,10 @@ class HttpClientService implements IHttpClient {
     }
   }
 
-  public async ping<T>(
+  public async ping(
     url: string | undefined = "",
     config: HttpClientConfig = {}
-  ): Promise<[T] | [void, Error]> {
+  ): Promise<[unknown] | [void, HttpClientError]> {
     try {
       const fullUrl = this.buildUrl(
         url || "/utils/ping",
@@ -172,7 +185,7 @@ class HttpClientService implements IHttpClient {
         throw new NetworkConnectionError(error.message);
       });
 
-      return this.handleResponse(response);
+      return this.handleResponse<unknown>(response);
     } catch (error) {
       return [, this.handleError(error)];
     }
@@ -199,7 +212,9 @@ class HttpClientService implements IHttpClient {
     return fullUrl;
   }
 
-  private handleResponse(response: any): [any] | [any, Error] {
+  private handleResponse<R = unknown>(
+    response: HttpResponse
+  ): [R] | [void, HttpClientError] {
     if (response.status >= 200 && response.status < 300) {
       return [response.data];
     }
@@ -207,7 +222,7 @@ class HttpClientService implements IHttpClient {
     return [, new BasicError(response.data, response.status)];
   }
 
-  private handleError(error: unknown): Error {
+  private handleError(error: unknown): HttpClientError {
     if (
       error instanceof NetworkConnectionError ||
       error instanceof BasicError ||
@@ -228,9 +243,9 @@ class HttpClientService implements IHttpClient {
 export default HttpClientService;
 export { BasicError, NetworkConnectionError, UnhandledError };
 export type {
-  IHttpClient,
+  HttpClientType,
   HttpClientConfig,
-  Error,
+  HttpClientError,
   BasicErrorType,
   NetworkConnectionErrorType,
   UnhandledErrorType,

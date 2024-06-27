@@ -1,13 +1,13 @@
 import * as icons from "ionicons/icons";
-type ReturnTypeWithError<T> = T extends void
-  ? Error | undefined
-  : [T] | [void, Error];
+type ReturnTypeWithError<T, E = Error> = T extends void
+  ? E | undefined
+  : [T] | [void, E];
 
-type AsyncReturnTypeWithError<T> = T extends Promise<infer U>
+type AsyncReturnTypeWithError<T, E = Error> = T extends Promise<infer U>
   ? U extends void
-    ? Promise<Error | undefined>
-    : Promise<[U] | [void, Error]>
-  : ReturnTypeWithError<T>;
+    ? Promise<E | undefined>
+    : Promise<[U] | [void, E]>
+  : ReturnTypeWithError<T, E>;
 
 type Local<T> = {
   synced: boolean;
@@ -67,26 +67,40 @@ type Actions = {
 type ActionType = keyof Actions;
 type ActionsUnion = Actions[ActionType];
 
-type ActionLoader<A extends Action> = Parameters<A["handler"]> extends []
-  ? () => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>
+type ActionLoader<A extends Action, E = Error> = Parameters<
+  A["handler"]
+> extends []
+  ? () => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>, E>
   : (
       params: Parameters<A["handler"]>[0]
-    ) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+    ) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>, E>;
 
-type createToolActionLoader = ActionLoader<createToolAction>;
-type updateToolActionLoader = ActionLoader<updateToolAction>;
-type deleteToolActionLoader = ActionLoader<deleteToolAction>;
-type getToolsActionLoader = ActionLoader<getToolsAction>;
+type createToolActionLoader<E extends Error = Error> = ActionLoader<
+  createToolAction,
+  E
+>;
+type updateToolActionLoader<E extends Error = Error> = ActionLoader<
+  updateToolAction,
+  E
+>;
+type deleteToolActionLoader<E extends Error = Error> = ActionLoader<
+  deleteToolAction,
+  E
+>;
+type getToolsActionLoader<E extends Error = Error> = ActionLoader<
+  getToolsAction,
+  E
+>;
 
 // type ActionsLoaders<Actions> = {
 //   [K in keyof Actions]: ActionLoader<Actions[K]>;
 // };
 
-type ActionsLoaders = {
-  getTools: getToolsActionLoader;
-  createTool: createToolActionLoader;
-  updateTool: updateToolActionLoader;
-  deleteTool: deleteToolActionLoader;
+type ActionsLoaders<E extends Error = Error> = {
+  getTools: getToolsActionLoader<E>;
+  createTool: createToolActionLoader<E>;
+  updateTool: updateToolActionLoader<E>;
+  deleteTool: deleteToolActionLoader<E>;
 };
 
 export type {

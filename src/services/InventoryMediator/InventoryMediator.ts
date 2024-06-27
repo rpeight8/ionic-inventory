@@ -4,10 +4,13 @@ import ActionHandlersService from "../ActionHandlersService/ActionHandlersServic
 import ActionSchedulerService from "../ActionSchedulerService/ActionSchedulerService";
 import type { ActionSchedulerType } from "../ActionSchedulerService/ActionSchedulerService";
 import HttpClientService from "../HttpClientService/HttpClientService";
+import type { HttpClientError } from "../HttpClientService/HttpClientService";
 import ActionManagerService, {
   ActionManagerServiceType,
 } from "../ActionManagerService/ActionManagerService";
 import { ActionsUnion, Tool } from "../../types";
+import NetworkStatusService from "../NetworkStatusService";
+import type { ServiceNetworkStatus } from "../NetworkStatusService";
 
 const storageService = StorageService.getInstance();
 const localServerConverterService =
@@ -25,6 +28,7 @@ const actionManagerService = new ActionManagerService(actionSchedulerService);
 type InventoryMediatorType = {
   initialize(): Promise<void>;
   getTools(): Promise<Tool[]>;
+  getNetworkStatus(): ReturnType<typeof NetworkStatusService.getStatus>;
 };
 
 class InventoryMediatorService implements InventoryMediatorType {
@@ -67,9 +71,21 @@ class InventoryMediatorService implements InventoryMediatorType {
 
   public async getTools(): Promise<Tool[]> {
     const tools = await this.actionManager.getTools();
-    return tools;
+
+    if (tools[1]) {
+      tools[1];
+    }
+  }
+
+  public async getNetworkStatus() {
+    return NetworkStatusService.getStatus();
   }
 }
+
+const mediator = InventoryMediatorService.getInstance(
+  actionSchedulerService,
+  actionManagerService
+);
 
 export default InventoryMediatorService;
 export type { InventoryMediatorType };

@@ -3,6 +3,7 @@ import HttpClientService, {
   NetworkConnectionError,
   UnhandledError,
   BasicError,
+  HttpClientType,
 } from "./HttpClientService/HttpClientService";
 
 enum EventName {
@@ -20,6 +21,8 @@ type ServiceNetworkStatus = {
 type ProviderNetworkStatus = {
   connected: boolean;
 };
+
+const HttpClient: HttpClientType = new HttpClientService();
 
 // Interface for the imported network module
 type NetworkServiceProvider = {
@@ -98,7 +101,7 @@ const updateNetworkStatus = async (): Promise<
   try {
     const status = await NetworkServiceProvider.getStatus();
     if (status.connected) {
-      const [, err] = await HttpClientService.ping<string>("", {});
+      const [, err] = await HttpClient.ping("", {});
       if (err) {
         throw new Error("Failed to ping");
       }
@@ -169,4 +172,4 @@ const NetworkStatusService: NetworkStatusService = {
 };
 
 export default NetworkStatusService;
-export type { NetworkStatusService };
+export type { NetworkStatusService, ServiceNetworkStatus };

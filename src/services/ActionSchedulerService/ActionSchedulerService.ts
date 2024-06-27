@@ -5,6 +5,7 @@ import type {
   ReturnTypeWithError,
 } from "../../types";
 import { v4 as uuidv4 } from "uuid";
+import { HttpClientError } from "../HttpClientService/HttpClientService";
 
 enum Status {
   OK = "ok",
@@ -27,9 +28,10 @@ type Action<
   handler: H;
 };
 
-type ActionLoader<A extends Action> = (
+// TODO: Fix errors
+type ActionLoader<A extends Action, E extends Error = HttpClientError> = (
   params: Parameters<A["handler"]>[0]
-) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>, E>;
 
 type WithAction<A> =
   | {
@@ -73,13 +75,13 @@ type ActionSchedulerType<ValidActions extends Action> = DAG<
   initialize(): Promise<void>;
   run(): Promise<void>;
   reset(): void;
-  addNode<A extends ValidActions>(
+  addNodeInternal<A extends ValidActions>(
     node: Node<WithAction<A>>,
     handlers: NodeActionStatusHandlers<A>
-  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>, HttpClientError>;
   addNodeToNode<A extends ValidActions>(
     params: addNodeParams<A>
-  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>, HttpClientError>;
   removeNode(id: string): ReturnTypeWithError<void>;
   removeNodeAndReattachChildren(id: string): ReturnTypeWithError<void>;
   findByType(type: ValidActions["type"]): Node<WithAction<ValidActions>>[];
@@ -94,7 +96,7 @@ class ActionSchedulerService<ValidActions extends Action>
   extends DAG<WithAction<ValidActions>>
   implements ActionSchedulerType<ValidActions>
 {
-  private static instance: ActionSchedulerService<any>;
+  private static instance: ActionSchedulerType<any>;
   private handlers: Handlers<ValidActions>;
   private initialized = false;
   private promises: Map<
@@ -136,7 +138,7 @@ class ActionSchedulerService<ValidActions extends Action>
 
   public static getInstance<ValidActions extends Action>(
     handlers: Handlers<ValidActions>
-  ): ActionSchedulerService<ValidActions> {
+  ): ActionSchedulerType<ValidActions> {
     if (!ActionSchedulerService.instance) {
       ActionSchedulerService.instance =
         new ActionSchedulerService<ValidActions>(handlers);
@@ -360,7 +362,7 @@ class ActionSchedulerService<ValidActions extends Action>
 
   // @ts-ignore
   // TODO: Fix this
-  private override addNode<A extends ValidActions>(
+  public override addNodeInternal<A extends ValidActions>(
     node: Node<WithAction<A>>,
     { onOk, onFail, onPending, onWait }: NodeActionStatusHandlers<A>
   ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>> {
@@ -414,7 +416,7 @@ class ActionSchedulerService<ValidActions extends Action>
         return [, new Error(`Parent node with id ${parentId} not found`)];
       }
 
-      const result = this.addNode<A>(node, {
+      const result = this.addNodeInternal<A>(node, {
         ...rest,
       });
 
@@ -444,6 +446,9 @@ class ActionSchedulerService<ValidActions extends Action>
         return error;
       }
       return new Error("Unexpected error: failed to remove node");
+    } finally {
+      if (this.promises.has(id)) this.promises.delete(id);
+      if (this.listeners.has(id)) this.listeners.delete(id);
     }
   }
 
@@ -460,9 +465,9 @@ class ActionSchedulerService<ValidActions extends Action>
         return error;
       }
       return new Error("Unexpected error: failed to remove node");
-    }
-    if (id === ROOT) {
-      throw new Error("Root node cannot be removed");
+    } finally {
+      if (this.promises.has(id)) this.promises.delete(id);
+      if (this.listeners.has(id)) this.listeners.delete(id);
     }
   }
 
@@ -493,7 +498,7 @@ class ActionSchedulerService<ValidActions extends Action>
     this.listeners = new Map();
     this.promises.clear();
     this.promises = new Map();
-    this.addNode(rootNode, {});
+    this.addNodeInternal(rootNode, {});
   }
 
   public serialize(): string {
