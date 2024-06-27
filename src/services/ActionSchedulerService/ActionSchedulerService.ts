@@ -27,6 +27,10 @@ type Action<
   handler: H;
 };
 
+type ActionLoader<A extends Action> = (
+  params: Parameters<A["handler"]>[0]
+) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+
 type WithAction<A> =
   | {
       type: A extends Action ? A["type"] : any;
@@ -39,9 +43,15 @@ type ExtractHandlers<A extends Action> = {
   [K in A["type"]]: Extract<A, { type: K }>["handler"];
 };
 
-type Handlers<A extends Action> = ExtractHandlers<A> & {
+type Handler = {
   initialize?: () => Promise<void>;
 };
+
+type MergeHandlersWithActionLoaders<H extends Handler, A extends Action> = H & {
+  [K in A["type"]]: ActionLoader<Extract<A, { type: K }>>;
+};
+
+type Handlers<A extends Action> = MergeHandlersWithActionLoaders<Handler, A>;
 
 type NodeActionStatusHandlers<A extends Action> = {
   onOk?: (value: ReturnType<A["handler"]>) => void;

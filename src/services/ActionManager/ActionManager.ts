@@ -1,5 +1,4 @@
 import {
-  Actions,
   ActionsUnion,
   AsyncReturnTypeWithError,
   Tool,
@@ -175,7 +174,6 @@ class ActionManager implements ActionManagerType {
     }
     try {
       await addNodeResult[0];
-      return undefined;
     } catch (error) {
       console.error("Failed to delete tool", error);
       return new Error("Failed to delete tool");

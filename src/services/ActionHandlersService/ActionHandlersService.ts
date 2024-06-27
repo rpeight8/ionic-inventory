@@ -1,7 +1,4 @@
-import { s } from "vitest/dist/reporters-5f784f42";
 import {
-  ActionType,
-  Actions,
   ActionsLoaders,
   AsyncReturnTypeWithError,
   Tool,
@@ -12,7 +9,7 @@ import { LocalServerConverterServiceType } from "../LocalServerConverterService"
 
 type ActionHandlersServiceType = {
   initialize: () => Promise<void>;
-};
+} & ActionsLoaders;
 
 class ActionHandlersService implements ActionHandlersServiceType {
   [key: string]: any;

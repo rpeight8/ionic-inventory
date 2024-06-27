@@ -69,7 +69,7 @@ type ActionsUnion = Actions[ActionType];
 
 type ActionLoader<A extends Action> = (
   params: Parameters<A["handler"]>[0]
-) => Promise<ReturnTypeWithError<ReturnType<A["handler"]>>>;
+) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
 
 type createToolActionLoader = ActionLoader<createToolAction>;
 type updateToolActionLoader = ActionLoader<updateToolAction>;
