@@ -67,9 +67,11 @@ type Actions = {
 type ActionType = keyof Actions;
 type ActionsUnion = Actions[ActionType];
 
-type ActionLoader<A extends Action> = (
-  params: Parameters<A["handler"]>[0]
-) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
+type ActionLoader<A extends Action> = Parameters<A["handler"]> extends []
+  ? () => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>
+  : (
+      params: Parameters<A["handler"]>[0]
+    ) => AsyncReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
 
 type createToolActionLoader = ActionLoader<createToolAction>;
 type updateToolActionLoader = ActionLoader<updateToolAction>;

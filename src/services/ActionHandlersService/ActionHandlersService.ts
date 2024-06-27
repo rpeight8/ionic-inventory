@@ -7,6 +7,7 @@ import {
 import type { IHttpClient } from "../HttpClientService/HttpClientService";
 import { LocalServerConverterServiceType } from "../LocalServerConverterService";
 
+// TODO: Make accept a generic type for action loaders
 type ActionHandlersServiceType = {
   initialize: () => Promise<void>;
 } & ActionsLoaders;

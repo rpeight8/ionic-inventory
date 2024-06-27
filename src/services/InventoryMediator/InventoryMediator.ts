@@ -4,7 +4,10 @@ import ActionHandlersService from "../ActionHandlersService/ActionHandlersServic
 import ActionSchedulerService from "../ActionSchedulerService/ActionSchedulerService";
 import type { ActionSchedulerType } from "../ActionSchedulerService/ActionSchedulerService";
 import HttpClientService from "../HttpClientService/HttpClientService";
-import { ActionsUnion } from "../../types";
+import ActionManagerService, {
+  ActionManagerServiceType,
+} from "../ActionManagerService/ActionManagerService";
+import { ActionsUnion, Tool } from "../../types";
 
 const storageService = StorageService.getInstance();
 const localServerConverterService =
@@ -17,25 +20,34 @@ const actionHandlersService = new ActionHandlersService({
 const actionSchedulerService = ActionSchedulerService.getInstance<ActionsUnion>(
   actionHandlersService
 );
+const actionManagerService = new ActionManagerService(actionSchedulerService);
 
 type InventoryMediatorType = {
   initialize(): Promise<void>;
+  getTools(): Promise<Tool[]>;
 };
 
 class InventoryMediatorService implements InventoryMediatorType {
   private static instance: InventoryMediatorService;
   private initialized = false;
   private actionScheduler: ActionSchedulerType<ActionsUnion>;
-  private constructor(actionScheduler: ActionSchedulerType<ActionsUnion>) {
+  private actionManager: ActionManagerServiceType;
+  private constructor(
+    actionScheduler: ActionSchedulerType<ActionsUnion>,
+    actionManager: ActionManagerServiceType
+  ) {
     this.actionScheduler = actionScheduler;
+    this.actionManager = actionManager;
   }
 
   public static getInstance(
-    actionScheduler: ActionSchedulerType<ActionsUnion>
+    actionScheduler: ActionSchedulerType<ActionsUnion>,
+    actionManager: ActionManagerServiceType
   ): InventoryMediatorService {
     if (!InventoryMediatorService.instance) {
       InventoryMediatorService.instance = new InventoryMediatorService(
-        actionScheduler
+        actionScheduler,
+        actionManager
       );
     }
     return InventoryMediatorService.instance as InventoryMediatorService;
@@ -51,6 +63,11 @@ class InventoryMediatorService implements InventoryMediatorType {
       console.error("Failed to initialize InventoryMediator", error);
       throw new Error("Failed to initialize InventoryMediator");
     }
+  }
+
+  public async getTools(): Promise<Tool[]> {
+    const tools = await this.actionManager.getTools();
+    return tools;
   }
 }
 

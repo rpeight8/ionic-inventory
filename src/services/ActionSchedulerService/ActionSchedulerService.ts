@@ -62,6 +62,7 @@ type NodeActionStatusHandlers<A extends Action> = {
 
 type addNodeParams<A extends Action> = {
   node: Node<WithAction<A>>;
+  parentId: ID;
 } & NodeActionStatusHandlers<A>;
 
 type ActionSchedulerType<ValidActions extends Action> = DAG<
@@ -72,14 +73,12 @@ type ActionSchedulerType<ValidActions extends Action> = DAG<
   initialize(): Promise<void>;
   run(): Promise<void>;
   reset(): void;
-  addNodeOverride<A extends ValidActions>(
-    params: addNodeParams<A>
+  addNode<A extends ValidActions>(
+    node: Node<WithAction<A>>,
+    handlers: NodeActionStatusHandlers<A>
   ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
   addNodeToNode<A extends ValidActions>(
-    params: {
-      node: Node<WithAction<A>>;
-      parentId: ID;
-    } & NodeActionStatusHandlers<A>
+    params: addNodeParams<A>
   ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
   removeNode(id: string): ReturnTypeWithError<void>;
   removeNodeAndReattachChildren(id: string): ReturnTypeWithError<void>;
@@ -359,14 +358,12 @@ class ActionSchedulerService<ValidActions extends Action>
     }
   }
 
-  // TODO: Override addNode
-  public addNodeOverride<A extends ValidActions>({
-    node,
-    onOk,
-    onFail,
-    onPending,
-    onWait,
-  }: addNodeParams<A>): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>> {
+  // @ts-ignore
+  // TODO: Fix this
+  private override addNode<A extends ValidActions>(
+    node: Node<WithAction<A>>,
+    { onOk, onFail, onPending, onWait }: NodeActionStatusHandlers<A>
+  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>> {
     try {
       if (!node.data.status.type) {
         node.data.status = {
@@ -417,8 +414,7 @@ class ActionSchedulerService<ValidActions extends Action>
         return [, new Error(`Parent node with id ${parentId} not found`)];
       }
 
-      const result = this.addNodeOverride<A>({
-        node,
+      const result = this.addNode<A>(node, {
         ...rest,
       });
 
@@ -495,7 +491,9 @@ class ActionSchedulerService<ValidActions extends Action>
     };
     this.listeners.clear();
     this.listeners = new Map();
-    this.addNode(rootNode);
+    this.promises.clear();
+    this.promises = new Map();
+    this.addNode(rootNode, {});
   }
 
   public serialize(): string {

@@ -1,4 +1,5 @@
 import {
+  ActionsLoaders,
   ActionsUnion,
   AsyncReturnTypeWithError,
   Tool,
@@ -14,11 +15,12 @@ import {
 } from "../ActionSchedulerService/ActionSchedulerService";
 import { v4 as uuidv4 } from "uuid";
 
-type ActionManagerType = {
+// TODO: Make accept a generic type for actions
+type ActionManagerServiceType = {
   initialize: () => Promise<void>;
-};
+} & ActionsLoaders;
 
-class ActionManager implements ActionManagerType {
+class ActionManagerService implements ActionManagerServiceType {
   [key: string]: any;
 
   private initialized = false;
@@ -181,4 +183,5 @@ class ActionManager implements ActionManagerType {
   };
 }
 
-export default ActionManager;
+export default ActionManagerService;
+export type { ActionManagerServiceType };
