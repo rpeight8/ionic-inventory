@@ -1,6 +1,9 @@
 import DAG from "../../utils/DAG";
 import type { Node, ID } from "../../utils/DAG";
-import type { ReturnTypeWithError } from "../../types";
+import type {
+  AsyncReturnTypeWithError,
+  ReturnTypeWithError,
+} from "../../types";
 import { v4 as uuidv4 } from "uuid";
 
 enum Status {
@@ -32,12 +35,8 @@ type WithAction<A> =
     }
   | { type: typeof ROOT; payload: undefined; status: StatusType };
 
-type ExtractHandlers<T extends Action> = {
-  [K in T as K extends { type: infer U }
-    ? U extends string | number | symbol
-      ? U
-      : never
-    : never]: K extends { handler: infer H } ? H : never;
+type ExtractHandlers<A extends Action> = {
+  [K in A["type"]]: Extract<A, { type: K }>["handler"];
 };
 
 type Handlers<A extends Action> = ExtractHandlers<A> & {
@@ -65,13 +64,13 @@ type ActionSchedulerType<ValidActions extends Action> = DAG<
   reset(): void;
   addNodeOverride<A extends ValidActions>(
     params: addNodeParams<A>
-  ): ReturnTypeWithError<void>;
+  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
   addNodeToNode<A extends ValidActions>(
     params: {
       node: Node<WithAction<A>>;
       parentId: ID;
     } & NodeActionStatusHandlers<A>
-  ): ReturnTypeWithError<void>;
+  ): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>>;
   removeNode(id: string): ReturnTypeWithError<void>;
   removeNodeAndReattachChildren(id: string): ReturnTypeWithError<void>;
   findByType(type: ValidActions["type"]): Node<WithAction<ValidActions>>[];
@@ -89,6 +88,13 @@ class ActionSchedulerService<ValidActions extends Action>
   private static instance: ActionSchedulerService<any>;
   private handlers: Handlers<ValidActions>;
   private initialized = false;
+  private promises: Map<
+    ID,
+    {
+      resolve: (value: ReturnType<ValidActions["handler"]>) => void;
+      reject: (error: Error) => void;
+    }
+  > = new Map();
   private listeners: Map<
     ID,
     {
@@ -222,7 +228,7 @@ class ActionSchedulerService<ValidActions extends Action>
 
   private async performAction(
     node: Node<WithAction<ValidActions>>
-  ): Promise<void> {
+  ): Promise<any> {
     if (node.data.type === ROOT) {
       throw new Error("Root node cannot be executed");
     }
@@ -231,9 +237,7 @@ class ActionSchedulerService<ValidActions extends Action>
     }
 
     if (node.data.type in this.handlers) {
-      // TODO: Fix as assertion
-      const handler =
-        this.handlers[node.data.type as keyof Handlers<ValidActions>];
+      const handler = this.handlers[node.data.type];
 
       if (!handler) {
         throw new Error(
@@ -352,7 +356,7 @@ class ActionSchedulerService<ValidActions extends Action>
     onFail,
     onPending,
     onWait,
-  }: addNodeParams<A>): ReturnTypeWithError<void> {
+  }: addNodeParams<A>): ReturnTypeWithError<Promise<ReturnType<A["handler"]>>> {
     try {
       if (!node.data.status.type) {
         node.data.status = {
@@ -361,17 +365,29 @@ class ActionSchedulerService<ValidActions extends Action>
       }
 
       if (node.data.type === ROOT) {
-        return new Error("Root node cannot be added");
+        return [, new Error("Root node cannot be added")];
       }
 
       if (onOk || onFail || onPending || onWait) {
         this.listeners.set(node.id, { onOk, onFail, onPending, onWait });
       }
 
+      const promise = new Promise<ReturnType<A["handler"]>>(
+        (resolve, reject) => {
+          this.promises.set(node.id, {
+            resolve,
+            reject,
+          });
+        }
+      );
+
       super.addNode(node);
+      return [promise];
     } catch (error) {
       console.log("Failed to add node", error);
-      return new Error(`Failed to add node with id ${node.id}`);
+      if (this.listeners.has(node.id)) this.listeners.delete(node.id);
+      if (this.promises.has(node.id)) this.promises.delete(node.id);
+      return [, new Error(`Failed to add node with id ${node.id}`)];
     }
   }
 
@@ -382,11 +398,13 @@ class ActionSchedulerService<ValidActions extends Action>
   }: {
     node: Node<WithAction<A>>;
     parentId: ID;
-  } & NodeActionStatusHandlers<A>): ReturnTypeWithError<void> {
+  } & NodeActionStatusHandlers<A>): ReturnTypeWithError<
+    Promise<ReturnType<A["handler"]>>
+  > {
     try {
       const parent = this.findNode(parentId);
       if (!parent) {
-        return new Error(`Parent node with id ${parentId} not found`);
+        return [, new Error(`Parent node with id ${parentId} not found`)];
       }
 
       const result = this.addNodeOverride<A>({
@@ -394,11 +412,18 @@ class ActionSchedulerService<ValidActions extends Action>
         ...rest,
       });
 
+      if (result[1]) {
+        return result;
+      }
+
       this.addEdge(parentId, node.id);
       this.idleNode(node);
+
+      return result;
     } catch (error) {
       console.log("Failed to add node", error);
-      return new Error(`Failed to add node with id ${node.id}`);
+
+      return [, new Error(`Failed to add node with id ${node.id}`)];
     }
   }
 

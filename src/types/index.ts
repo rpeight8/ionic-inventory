@@ -76,6 +76,10 @@ type updateToolActionLoader = ActionLoader<updateToolAction>;
 type deleteToolActionLoader = ActionLoader<deleteToolAction>;
 type getToolsActionLoader = ActionLoader<getToolsAction>;
 
+// type ActionsLoaders<Actions> = {
+//   [K in keyof Actions]: ActionLoader<Actions[K]>;
+// };
+
 type ActionsLoaders = {
   getTools: getToolsActionLoader;
   createTool: createToolActionLoader;

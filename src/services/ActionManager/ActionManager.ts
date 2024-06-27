@@ -41,8 +41,8 @@ class ActionManager implements ActionManagerType {
 
   getTools: () => AsyncReturnTypeWithError<Promise<Tool[]>> = async () => {
     const addNodeResult =
-      await this.actionScheduler.addNodeToNode<getToolsAction>(
-        {
+      await this.actionScheduler.addNodeToNode<getToolsAction>({
+        node: {
           id: uuidv4(),
           data: {
             type: "getTools",
@@ -53,8 +53,8 @@ class ActionManager implements ActionManagerType {
             },
           },
         },
-        RootNodeId
-      );
+        parentId: RootNodeId,
+      });
 
     if (addNodeResult.length === 2) {
       return [, addNodeResult[1]];
@@ -72,10 +72,6 @@ class ActionManager implements ActionManagerType {
   createTool: (tool: Tool) => AsyncReturnTypeWithError<Promise<Tool>> = async (
     tool: Tool
   ) => {
-    let res, rej;
-    const okPromise = new Promise<Tool>((resolve) => {
-      res = resolve;
-    });
     const addNodeResult = this.actionScheduler.addNodeToNode<createToolAction>({
       node: {
         id: uuidv4(),
@@ -89,14 +85,12 @@ class ActionManager implements ActionManagerType {
         },
       },
       parentId: RootNodeId,
-      onOk: res,
     });
 
-    okPromise.then((tool) => console.log("Tool created", tool));
-
-    if (addNodeResult) {
+    if (addNodeResult.length === 2) {
       return [, addNodeResult[1]];
     }
+
     try {
       const createdTool = await addNodeResult[0];
 
@@ -124,11 +118,11 @@ class ActionManager implements ActionManagerType {
       ];
     }
 
-    const toNode = createToolNodes[0].id || RootNodeId;
+    const toNodeId = createToolNodes[0].id || RootNodeId;
 
     const addNodeResult =
-      await this.actionScheduler.addNodeToNode<updateToolAction>(
-        {
+      await this.actionScheduler.addNodeToNode<updateToolAction>({
+        node: {
           id: uuidv4(),
           data: {
             type: "updateTool",
@@ -139,8 +133,8 @@ class ActionManager implements ActionManagerType {
             },
           },
         },
-        toNode
-      );
+        parentId: toNodeId,
+      });
 
     if (addNodeResult.length === 2) {
       return [, addNodeResult[1]];
@@ -161,8 +155,8 @@ class ActionManager implements ActionManagerType {
     id: string;
   }) => {
     const addNodeResult =
-      await this.actionScheduler.addNodeToNode<deleteToolAction>(
-        {
+      await this.actionScheduler.addNodeToNode<deleteToolAction>({
+        node: {
           id: uuidv4(),
           data: {
             type: "deleteTool",
@@ -173,8 +167,8 @@ class ActionManager implements ActionManagerType {
             },
           },
         },
-        RootNodeId
-      );
+        parentId: RootNodeId,
+      });
 
     if (addNodeResult.length === 2) {
       return addNodeResult[1];
