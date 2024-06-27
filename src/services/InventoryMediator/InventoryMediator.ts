@@ -70,11 +70,7 @@ class InventoryMediatorService implements InventoryMediatorType {
   }
 
   public async getTools(): Promise<Tool[]> {
-    const tools = await this.actionManager.getTools();
-
-    if (tools[1]) {
-      tools[1];
-    }
+    const Tools = await this.actionManager.getTools();
   }
 
   public async getNetworkStatus() {

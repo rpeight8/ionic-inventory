@@ -14,11 +14,12 @@ import {
   RootNodeId,
 } from "../ActionSchedulerService/ActionSchedulerService";
 import { v4 as uuidv4 } from "uuid";
+import { HttpClientError } from "../HttpClientService/HttpClientService";
 
 // TODO: Make accept a generic type for actions
 type ActionManagerServiceType = {
   initialize: () => Promise<void>;
-} & ActionsLoaders;
+} & ActionsLoaders<HttpClientError>;
 
 class ActionManagerService implements ActionManagerServiceType {
   [key: string]: any;
